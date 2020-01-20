@@ -23,10 +23,19 @@ client_id = privateVar.split('\n', 1)[0]
 client_secret = privateVar.split('\n', 1)[1]
 
 
+# fetch how many more calls we have for the hour
+def git_api_rate_limit():
+    data = fetch(add_url_query("https://api.github.com/rate_limit", 1))
+    return data['rate']['remaining']
+
+
 # appends the client id and the client secret to urls
 def add_url_query (url, page):
     query = '?per_page=100&page='+str(page)+'&client_id='+client_id+'&client_secret='+client_secret
-    return url[0]+query
+    if len(url) == 1:
+        return url[0]+query
+    else:
+        return url+query
 
 
 # Returns data from a call to a url
@@ -59,7 +68,7 @@ def create_repo_data_object(repo):
         "time_line": fetch_time_line_data(commits_url,issue_events_url)
     }
 
-    pprint.pprint(entry)
+    # pprint.pprint(entry)
 
 
 # extract content from commits url
@@ -93,16 +102,26 @@ def extract_from_commit(data):
     for commitObj in data:
         date = commitObj['commit']['author']['date']
         message = commitObj['commit']['message']
+        url = commitObj['url']
+
+        data_from_commit_url = fetch(add_url_query(url, 1))
 
         entry = {
             "commit_sha": commitObj['sha'],
+            "url": url,
             "committer_name": commitObj['commit']['author']['name'],
             "created_at": date,
             "message": message,
             "isMergePR": True if "Merge pull request #" in message else False,
-            "type": "Commit"
+            "type": "Commit",
+            "comments_count": data_from_commit_url['commit']['comment_count'],
+            "comments_url": data_from_commit_url['comments_url'],
+            "addition": data_from_commit_url['stats']['additions'],
+            "deletion": data_from_commit_url['stats']['deletions']
         }
 
+        if data_from_commit_url['commit']['comment_count'] > 0:
+            print '8888888888888888888888888888888888'
         time_line_array.append(entry)
 
 
@@ -170,3 +189,5 @@ if __name__ == "__main__":
             create_repo_data_object(e)
             break
 
+
+#add to issues (addition/deletion/comments url/ comments_count)
