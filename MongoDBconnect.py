@@ -73,30 +73,36 @@ def create_repo_data_object(repo):
         entry = {
             "name": repo['name'],
             "language": repo['language'],
-            "created_at": repo['created_at'],
-            "url": repo['url'],
             "owner": repo['owner']['login'],
-            "watch": repo['subscribers_count'],
-            "forks": repo['forks_count'],
-            "stars": repo['stargazers_count'],
-            "issue_events_url": issue_events_url,
-            "commits_url": commits_url,
+            "created_at": repo['created_at'],
+            "urls": {
+                "repo_url": repo['url'],
+                "issue_events_url": issue_events_url,
+                "commits_url": commits_url
+            },
+            "popularity": {
+                "watch": repo['subscribers_count'],
+                "forks": repo['forks_count'],
+                "stars": repo['stargazers_count']
+            },
             "time_line": fetch_time_line_data(commits_url, issue_events_url),
-            "total_commits": repo_commits_count,
-            "total_issues": repo_issues_count,
-            "total_closed_issues": repo_closed_issues_count,
-            "total_commits_comments": repo_commits_comments_count,
-            "total_issues_comments": repo_issues_comments_count,
-            "total_pos_commit_comments": commits_positive_comments_count,
-            "total_neg_commit_comments": commits_negative_comments_count,
-            "total_pos_issues_comments": issues_positive_comments_count,
-            "total_neg_issues_comments": issues_negative_comments_count,
-            "commits_pos_comments_prob_sum": commits_pos_comments_prob_sum,
-            "commits_neg_comments_prob_sum": commits_neg_comments_prob_sum,
-            "commits_neutral_comments_prob_sum": commits_neutral_comments_prob_sum,
-            "issues_pos_comments_prob_sum": issues_pos_comments_prob_sum,
-            "issues_neg_comments_prob_sum": issues_neg_comments_prob_sum,
-            "issues_neutral_comments_prob_sum": issues_neutral_comments_prob_sum
+            "statistics": {
+                "total_commits": repo_commits_count,
+                "total_issues": repo_issues_count,
+                "total_closed_issues": repo_closed_issues_count,
+                "total_commits_comments": repo_commits_comments_count,
+                "total_issues_comments": repo_issues_comments_count,
+                "total_pos_commit_comments": commits_positive_comments_count,
+                "total_neg_commit_comments": commits_negative_comments_count,
+                "total_pos_issues_comments": issues_positive_comments_count,
+                "total_neg_issues_comments": issues_negative_comments_count,
+                "commits_pos_comments_prob_sum": commits_pos_comments_prob_sum,
+                "commits_neg_comments_prob_sum": commits_neg_comments_prob_sum,
+                "commits_neutral_comments_prob_sum": commits_neutral_comments_prob_sum,
+                "issues_pos_comments_prob_sum": issues_pos_comments_prob_sum,
+                "issues_neg_comments_prob_sum": issues_neg_comments_prob_sum,
+                "issues_neutral_comments_prob_sum": issues_neutral_comments_prob_sum
+            }
         }
 
         pprint.pprint(entry)
@@ -431,6 +437,7 @@ if __name__ == "__main__":
 
 ########################################################################################################################
 
+# commenter and committer details
 # look around releases / milestones to check other users' reviews about the product
 # Think about creating a model that represents the current data model (repo time line)
 # How can I improve the model?
