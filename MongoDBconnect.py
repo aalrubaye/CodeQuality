@@ -509,12 +509,3 @@ if __name__ == "__main__":
 # repo popularity (stars) evolution/history (in order to see if it's related to the code quality)
 # Very last step, is to make sure you add each entry for each repo in a mongo db
 
-    # aut = [
-    #     {'author': 'Jorge','follower': 20},
-    #     {'author': 'Kenny', 'follower': 10}]
-    #
-    # search = next((item for item in aut if item["author"] == "Jorge"), False)
-    # if search is False:
-    #     print 'no'
-    # else:
-    #     print search
