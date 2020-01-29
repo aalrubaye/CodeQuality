@@ -16,7 +16,7 @@ pull_requests = database.pull_requests
 events = database.events
 commits = database.commits.bson
 commit_comments = database.commit_comments
-global time_line_array, issue_numbers_temp_array, api_call, start
+global time_line_array, issue_numbers_temp_array, api_call, start, author_list
 global repo_commits_count, repo_issues_count, repo_closed_issues_count, repo_commits_comments_count, repo_issues_comments_count
 global commits_positive_comments_count, commits_negative_comments_count, issues_positive_comments_count, issues_negative_comments_count
 global commits_pos_comments_prob_sum, commits_neg_comments_prob_sum, commits_neutral_comments_prob_sum
@@ -56,6 +56,10 @@ def fetch(url, count_call):
             api_call += 1
         return data
     except urllib2.URLError, e:
+        print '****************'
+        print '$$$$1 - Fetch'
+        print '****************'
+        print e.message
         return None
 
 
@@ -108,6 +112,42 @@ def create_repo_data_object(repo):
         pprint.pprint(entry)
 
 
+# Fetch num of committer's followers
+def fetch_authors_followers_count(author, url):
+
+    search_author = next((item for item in author_list if item["author"] == author), False)
+    if search_author is False:
+        try:
+            print 'Fetching author followers for ' + author + '...'
+
+            count = 0
+            page = 1
+            data = fetch(add_url_query(url, page), True)
+
+            while len(list(data)) == 100:
+                count += 100
+                page += 1
+                data = fetch(add_url_query(url, page), True)
+
+            count += len(list(data))
+            entry = {
+                        'author': author,
+                        'followers': count
+                    }
+
+            author_list.append(entry)
+            return count
+
+        except Exception as e:
+            print '****************'
+            print '$$$$2 - authorsCount'
+            print '****************'
+            print e.message
+            return 0
+    else:
+        return search_author['followers']
+
+
 # extract content from commits url
 def fetch_time_line_data(commit_url, issue_url):
     try:
@@ -139,6 +179,10 @@ def fetch_time_line_data(commit_url, issue_url):
         return sorted(time_line_array, key=lambda i: i['created_at'])
 
     except Exception as e:
+        print '****************'
+        print '$$$$3 - timeLine'
+        print '****************'
+        print e.message
         return []
 
 
@@ -155,22 +199,22 @@ def extract_from_commit(data):
             date = commitObj['commit']['author']['date']
             message = commitObj['commit']['message']
             url = commitObj['url']
-
+            author = commitObj['author']['login']
+            author_followers_url = commitObj['author']['followers_url']
+            author_followers_count = fetch_authors_followers_count(author, author_followers_url)
+            print 'Commit from' + str(author) + '...'
             # Fetch some information from each individual commits urls
             data_from_commit_url = fetch(add_url_query(url, 1), True)
-
             comments_count = data_from_commit_url['commit']['comment_count']
             comments_url = data_from_commit_url['comments_url']
-
             comments = {}
-
             if comments_count > 0:
                 comments = extract_from_comment(comments_url, comments_count, True)
 
             entry = {
-                "commit_sha": commitObj['sha'],
                 "url": url,
-                "committer_name": commitObj['commit']['author']['name'],
+                "author": author,
+                "author_followers_count": author_followers_count,
                 "created_at": date,
                 "message": message,
                 "isMergePR": True if "Merge pull request #" in message else False,
@@ -186,6 +230,10 @@ def extract_from_commit(data):
             time_line_array.append(entry)
 
     except Exception as e:
+        print '****************'
+        print '$$$$4 - Commit'
+        print '****************'
+        print e.message
         return []
 
 
@@ -211,27 +259,34 @@ def extract_from_issue(data):
                 state = issueObj['issue']['state']
                 pull_request_url = issueObj['issue']['pull_request']['url']
 
+                author = issueObj['issue']['user']['login']
+                author_followers_url = issueObj['issue']['user']['followers_url']
+                author_followers_count = fetch_authors_followers_count(author, author_followers_url)
+                print 'Issue from' + str(author) + '...'
                 # fetch the data from a pr url to extract the needed info
                 data_from_pr_url = fetch(add_url_query(pull_request_url, 1), True)
-
                 comments_count = issueObj['issue']['comments']
                 comments_url = issueObj['issue']['comments_url']
-
                 comments = {}
-
                 if comments_count > 0:
                     comments = extract_from_comment(comments_url, comments_count, False)
 
                 if state == 'closed':
 
                     repo_closed_issues_count += 1
+                    closed_by = issueObj['actor']['login']
+
+                    if closed_by == author:
+                        close_author_followers_count = author_followers_count
+                    else:
+                        close_author_url = issueObj['actor']['followers_url']
+                        close_author_followers_count = fetch_authors_followers_count(closed_by, close_author_url)
 
                     entry_closed = {
                         "issue_number": issue_number,
-                        # The time that the issue was closed at
-                        # Called it created at just for sorting purposes
                         "created_at": issueObj['issue']['closed_at'],
-                        "closed_by": issueObj['actor']['login'],
+                        "author": closed_by,
+                        "author_followers_count": close_author_followers_count,
                         "type": "IssueClosed"
                     }
 
@@ -243,7 +298,8 @@ def extract_from_issue(data):
                     "title": issueObj['issue']['title'],
                     "body": issueObj['issue']['body'],
                     "pull_request_url": pull_request_url,
-                    "created_by": issueObj['issue']['user']['login'],
+                    "author": author,
+                    "author_followers_count": author_followers_count,
                     "created_at": issueObj['issue']['created_at'],
                     "isClosed": True if state == 'closed' else False,
                     "type": "IssueOpened",
@@ -261,6 +317,10 @@ def extract_from_issue(data):
                 time_line_array.append(entry)
 
     except Exception as e:
+        print '****************'
+        print '$$$$5 - Issues'
+        print '****************'
+        print e.message
         return []
 
 
@@ -320,15 +380,18 @@ def extract_from_comment(url, comments_count, from_commit):
             st_prob = sentiment_prob(body, from_commit)['probability']
             st_label = sentiment_prob(body, from_commit)['label']
 
+            print 'Comment ...'
+
             entry = {
                 'url': comment['url'],
-                'commenter': comment['user']['login'],
+                'author': comment['user']['login'],
                 'comment_created_at': comment['created_at'],
                 'body': body,
                 'positive': st_prob['pos'],
                 'neutral': st_prob['neutral'],
                 'negative': st_prob['neg'],
-                'label': st_label
+                'label': st_label,
+                "type": "Comment"
             }
 
     if from_commit:
@@ -389,11 +452,12 @@ def initialize_statistics_counters():
 # The main function
 if __name__ == "__main__":
     i = 0
-    global start
+    global start, author_list
 
     for e in repos.find():
         i += 1
         api_call = 0
+
         repo_commits_count = 0
         repo_issues_count = 0
         repo_closed_issues_count = 0
@@ -414,6 +478,7 @@ if __name__ == "__main__":
         if (e['open_issues_count']) != 0:
             start = time.time()
             time_line_array = []
+            author_list = []
             issue_numbers_temp_array = []
 
             # initialize_statistics_counters()
@@ -443,3 +508,13 @@ if __name__ == "__main__":
 # How can I improve the model?
 # repo popularity (stars) evolution/history (in order to see if it's related to the code quality)
 # Very last step, is to make sure you add each entry for each repo in a mongo db
+
+    # aut = [
+    #     {'author': 'Jorge','follower': 20},
+    #     {'author': 'Kenny', 'follower': 10}]
+    #
+    # search = next((item for item in aut if item["author"] == "Jorge"), False)
+    # if search is False:
+    #     print 'no'
+    # else:
+    #     print search
