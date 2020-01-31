@@ -263,6 +263,7 @@ def extract_from_issue(data):
                 author_followers_url = issueObj['issue']['user']['followers_url']
                 author_followers_count = fetch_authors_followers_count(author, author_followers_url)
                 print 'Issue from' + str(author) + '...'
+
                 # fetch the data from a pr url to extract the needed info
                 data_from_pr_url = fetch(add_url_query(pull_request_url, 1), True)
                 comments_count = issueObj['issue']['comments']
@@ -373,6 +374,7 @@ def extract_from_comment(url, comments_count, from_commit):
     global repo_commits_comments_count, repo_issues_comments_count
 
     data_from_comments = fetch(add_url_query(url, 1), True)
+
     entry = {}
     if len(data_from_comments) > 0:
         for comment in data_from_comments:
@@ -380,11 +382,15 @@ def extract_from_comment(url, comments_count, from_commit):
             st_prob = sentiment_prob(body, from_commit)['probability']
             st_label = sentiment_prob(body, from_commit)['label']
 
+            author = comment['user']['login']
+            author_followers_url = comment['user']['followers_url']
+            author_followers_count = fetch_authors_followers_count(author, author_followers_url)
             print 'Comment ...'
 
             entry = {
                 'url': comment['url'],
-                'author': comment['user']['login'],
+                'author': author,
+                "author_followers_count": author_followers_count,
                 'comment_created_at': comment['created_at'],
                 'body': body,
                 'positive': st_prob['pos'],
@@ -502,10 +508,20 @@ if __name__ == "__main__":
 
 ########################################################################################################################
 
+# function to show or hide certain "prints"
+# sort functions (try to find a way to use utility class for utility functions)
 # commenter and committer details
 # look around releases / milestones to check other users' reviews about the product
+# document the data model for commit, issues, and comment
+# sketch how they are lay down on the time line
+# write down all possible statistic work possible that I can think of here (document the statistics as well)
 # Think about creating a model that represents the current data model (repo time line)
 # How can I improve the model?
 # repo popularity (stars) evolution/history (in order to see if it's related to the code quality)
-# Very last step, is to make sure you add each entry for each repo in a mongo db
+# How can we make the code more efficient related to its number of calls to Github API
+# make sure to use multiple threads via using different Github API accounts to get more data within less time
+# timer for Github API calls to not exceed the limit
+# Very last step, is to make sure you add each entry for each repo in a MongoDB
+# setup an overleaf initial paper
+
 
