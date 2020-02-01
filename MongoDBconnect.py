@@ -6,6 +6,8 @@ import time
 import simplejson
 from pymongo import MongoClient
 import urllib
+import sys
+import Utility
 
 __author__ = 'Abdul Rubaye'
 
@@ -16,7 +18,7 @@ pull_requests = database.pull_requests
 events = database.events
 commits = database.commits.bson
 commit_comments = database.commit_comments
-global time_line_array, issue_numbers_temp_array, api_call, start, author_list
+global time_line_array, issue_numbers_temp_array, api_call, start, author_list, do_print
 global repo_commits_count, repo_issues_count, repo_closed_issues_count, repo_commits_comments_count, repo_issues_comments_count
 global commits_positive_comments_count, commits_negative_comments_count, issues_positive_comments_count, issues_negative_comments_count
 global commits_pos_comments_prob_sum, commits_neg_comments_prob_sum, commits_neutral_comments_prob_sum
@@ -56,10 +58,7 @@ def fetch(url, count_call):
             api_call += 1
         return data
     except urllib2.URLError, e:
-        print '****************'
-        print '$$$$1 - Fetch'
-        print '****************'
-        print e.message
+        Utility.show_progress_message(do_print, 'Error on Fetch Function: (' + str(e.message) + ')')
         return None
 
 
@@ -108,7 +107,7 @@ def create_repo_data_object(repo):
                 "issues_neutral_comments_prob_sum": issues_neutral_comments_prob_sum
             }
         }
-
+        print
         pprint.pprint(entry)
 
 
@@ -118,7 +117,7 @@ def fetch_authors_followers_count(author, url):
     search_author = next((item for item in author_list if item["author"] == author), False)
     if search_author is False:
         try:
-            print 'Fetching author followers for ' + author + '...'
+            Utility.show_progress_message(do_print, 'Fetching author followers for: ' + author + '...')
 
             count = 0
             page = 1
@@ -139,10 +138,7 @@ def fetch_authors_followers_count(author, url):
             return count
 
         except Exception as e:
-            print '****************'
-            print '$$$$2 - authorsCount'
-            print '****************'
-            print e.message
+            Utility.show_progress_message(do_print, 'Error on Authors Count Function: (' + str(e.message) + ')')
             return 0
     else:
         return search_author['followers']
@@ -179,10 +175,7 @@ def fetch_time_line_data(commit_url, issue_url):
         return sorted(time_line_array, key=lambda i: i['created_at'])
 
     except Exception as e:
-        print '****************'
-        print '$$$$3 - timeLine'
-        print '****************'
-        print e.message
+        Utility.show_progress_message(do_print, 'Error on TimeLine Function: (' + str(e.message) + ')')
         return []
 
 
@@ -202,7 +195,9 @@ def extract_from_commit(data):
             author = commitObj['author']['login']
             author_followers_url = commitObj['author']['followers_url']
             author_followers_count = fetch_authors_followers_count(author, author_followers_url)
-            print 'Commit from' + str(author) + '...'
+
+            Utility.show_progress_message(do_print, 'Commit from: ' + str(author) + '...')
+
             # Fetch some information from each individual commits urls
             data_from_commit_url = fetch(add_url_query(url, 1), True)
             comments_count = data_from_commit_url['commit']['comment_count']
@@ -230,10 +225,7 @@ def extract_from_commit(data):
             time_line_array.append(entry)
 
     except Exception as e:
-        print '****************'
-        print '$$$$4 - Commit'
-        print '****************'
-        print e.message
+        Utility.show_progress_message(do_print, 'Error on Commits Function: (' + str(e.message) + ')')
         return []
 
 
@@ -262,7 +254,8 @@ def extract_from_issue(data):
                 author = issueObj['issue']['user']['login']
                 author_followers_url = issueObj['issue']['user']['followers_url']
                 author_followers_count = fetch_authors_followers_count(author, author_followers_url)
-                print 'Issue from' + str(author) + '...'
+
+                Utility.show_progress_message(do_print, 'Issue from: ' + str(author) + '...')
 
                 # fetch the data from a pr url to extract the needed info
                 data_from_pr_url = fetch(add_url_query(pull_request_url, 1), True)
@@ -318,11 +311,49 @@ def extract_from_issue(data):
                 time_line_array.append(entry)
 
     except Exception as e:
-        print '****************'
-        print '$$$$5 - Issues'
-        print '****************'
-        print e.message
+        Utility.show_progress_message(do_print, 'Error on Issues Function: (' + str(e.message) + ')')
         return []
+
+
+# extract data from comments url
+def extract_from_comment(url, comments_count, from_commit):
+
+    global repo_commits_comments_count, repo_issues_comments_count
+
+    data_from_comments = fetch(add_url_query(url, 1), True)
+
+    entry = {}
+    if len(data_from_comments) > 0:
+        for comment in data_from_comments:
+            body = comment['body']
+            st_prob = sentiment_prob(body, from_commit)['probability']
+            st_label = sentiment_prob(body, from_commit)['label']
+
+            author = comment['user']['login']
+            author_followers_url = comment['user']['followers_url']
+            author_followers_count = fetch_authors_followers_count(author, author_followers_url)
+
+            Utility.show_progress_message(do_print, 'Comment from: ' + str(author) + '...')
+
+            entry = {
+                'url': comment['url'],
+                'author': author,
+                "author_followers_count": author_followers_count,
+                'comment_created_at': comment['created_at'],
+                'body': body,
+                'positive': st_prob['pos'],
+                'neutral': st_prob['neutral'],
+                'negative': st_prob['neg'],
+                'label': st_label,
+                "type": "Comment"
+            }
+
+    if from_commit:
+        repo_commits_comments_count += comments_count
+    else:
+        repo_issues_comments_count += comments_count
+
+    return entry
 
 
 # Analyse a text to find its sentiment probabilities
@@ -368,65 +399,14 @@ def sentiment_prob(body, from_commit):
     return returned_json
 
 
-# extract data from comments url
-def extract_from_comment(url, comments_count, from_commit):
-
-    global repo_commits_comments_count, repo_issues_comments_count
-
-    data_from_comments = fetch(add_url_query(url, 1), True)
-
-    entry = {}
-    if len(data_from_comments) > 0:
-        for comment in data_from_comments:
-            body = comment['body']
-            st_prob = sentiment_prob(body, from_commit)['probability']
-            st_label = sentiment_prob(body, from_commit)['label']
-
-            author = comment['user']['login']
-            author_followers_url = comment['user']['followers_url']
-            author_followers_count = fetch_authors_followers_count(author, author_followers_url)
-            print 'Comment ...'
-
-            entry = {
-                'url': comment['url'],
-                'author': author,
-                "author_followers_count": author_followers_count,
-                'comment_created_at': comment['created_at'],
-                'body': body,
-                'positive': st_prob['pos'],
-                'neutral': st_prob['neutral'],
-                'negative': st_prob['neg'],
-                'label': st_label,
-                "type": "Comment"
-            }
-
-    if from_commit:
-        repo_commits_comments_count += comments_count
-    else:
-        repo_issues_comments_count += comments_count
-
-    return entry
-
-
-# convert date/time stamp to a regular string
-def change_date_to_string(date):
-    dt = datetime.strptime(date, '%Y-%m-%dT%H:%M:%SZ')
-    return str(dt.year) + str(dt.month) + str(dt.day) + str(dt.hour) + str(dt.minute) + str(dt.second)
-
-
-def time_elapsed():
-    elapsed_time = time.time() - start
-    return str(time.strftime("%H:%M:%S", time.gmtime(elapsed_time)))
-
-
 # a small function to output which repo index is already done, how long it takes, and how many calls are remaining
-def progress(i):
+def progress(repo_num):
     print
     print '#' * 100
-    print 'repository num  = ' + str(i)
+    print 'repository num  = ' + str(repo_num)
     print 'limit remaining = ' + str(git_api_rate_limit())
     print 'api calls took  = ' + str(api_call)
-    print 'time elapsed    = ' + time_elapsed()
+    print 'time elapsed    = ' + Utility.time_elapsed(start)
     print '#' * 100
     print
 
@@ -458,37 +438,33 @@ def initialize_statistics_counters():
 # The main function
 if __name__ == "__main__":
     i = 0
-    global start, author_list
+    global start, author_list, do_print
+
+    do_print = True
 
     for e in repos.find():
         i += 1
         api_call = 0
 
-        repo_commits_count = 0
-        repo_issues_count = 0
-        repo_closed_issues_count = 0
-        repo_commits_comments_count = 0
-        repo_issues_comments_count = 0
-        commits_positive_comments_count = 0
-        commits_negative_comments_count = 0
-        issues_positive_comments_count = 0
-        issues_negative_comments_count = 0
-        commits_pos_comments_prob_sum = 0
-        commits_neg_comments_prob_sum = 0
-        commits_neutral_comments_prob_sum = 0
-        issues_pos_comments_prob_sum = 0
-        issues_neg_comments_prob_sum = 0
-        issues_neutral_comments_prob_sum = 0
+        repo_commits_count = 0; repo_issues_count = 0; repo_closed_issues_count = 0; repo_commits_comments_count = 0
+        repo_issues_comments_count = 0; commits_positive_comments_count = 0; commits_negative_comments_count = 0
+        issues_positive_comments_count = 0; issues_negative_comments_count = 0; commits_pos_comments_prob_sum = 0
+        commits_neg_comments_prob_sum = 0; commits_neutral_comments_prob_sum = 0; issues_pos_comments_prob_sum = 0
+        issues_neg_comments_prob_sum = 0; issues_neutral_comments_prob_sum = 0
 
         # filter out the repos with no issues
         if (e['open_issues_count']) != 0:
+
+            print '-' * 100
+            print 'repo number (' + str(i)+') is in progress'
+            print '-' * 100
+
             start = time.time()
             time_line_array = []
             author_list = []
             issue_numbers_temp_array = []
 
-            # initialize_statistics_counters()
-
+            initialize_statistics_counters()
             create_repo_data_object(e)
             progress(i)
             break
@@ -505,11 +481,12 @@ if __name__ == "__main__":
 # very important: work around the sentiment analysis (if a comment was added)
 # find whether the code is testable or not ---> No way to see this
 # at the end, find the percentage of the commits / issues / prs that were code reviewed
+# function to show or hide certain "prints"
+# function to show time elapsed while running each repo
+# sort functions (try to find a way to use utility class for utility functions)
 
 ########################################################################################################################
 
-# function to show or hide certain "prints"
-# sort functions (try to find a way to use utility class for utility functions)
 # commenter and committer details
 # look around releases / milestones to check other users' reviews about the product
 # document the data model for commit, issues, and comment

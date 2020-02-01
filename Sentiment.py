@@ -34,4 +34,3 @@ u3 = urllib.urlopen("http://text-processing.com/api/sentiment/", data3)
 
 t = json.loads(u.read())
 print t
-
