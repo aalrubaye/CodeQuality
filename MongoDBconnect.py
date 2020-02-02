@@ -484,12 +484,13 @@ if __name__ == "__main__":
 # function to show or hide certain "prints"
 # function to show time elapsed while running each repo
 # sort functions (try to find a way to use utility class for utility functions)
+# commenter and committer details
+# look around releases / milestones to check other users' reviews about the product
 
 ########################################################################################################################
 
-# commenter and committer details
-# look around releases / milestones to check other users' reviews about the product
 # document the data model for commit, issues, and comment
+# review comments should be included
 # sketch how they are lay down on the time line
 # write down all possible statistic work possible that I can think of here (document the statistics as well)
 # Think about creating a model that represents the current data model (repo time line)
@@ -497,6 +498,7 @@ if __name__ == "__main__":
 # repo popularity (stars) evolution/history (in order to see if it's related to the code quality)
 # How can we make the code more efficient related to its number of calls to Github API
 # make sure to use multiple threads via using different Github API accounts to get more data within less time
+# sample run to check potential errors
 # timer for Github API calls to not exceed the limit
 # Very last step, is to make sure you add each entry for each repo in a MongoDB
 # setup an overleaf initial paper
