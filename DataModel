@@ -1,0 +1,61 @@
+{
+    name: sample-data-object,
+    owner: Software-Devel,
+    created_at: 2016-04-27T18:06:49,
+    language: Python,
+    popularity: {
+        forks: 1405,
+        stars: 132,
+        watch: 35
+    },
+    time_line: [
+                    {
+                        type: Commit,
+                        created_at: 2016-04-27T18:08:41,
+                        author: tester-kid,
+                        author_followers_count: 44,
+                        url: <the commit’s url>
+                        addition: 375,
+                        deletion: 0,
+                        message: initialize the project,
+                        isMergePR: False,
+                        comments_count: 0,
+                        comments: {},
+                        comments_url: <the commit’s comments url>,
+                    },
+                    {
+                        type: IssueOpened,
+                        issue_number: 2,
+                        created_at: 2016-04-28T20:21:04,
+                        author: bob_theCoder,
+                        author_followers_count: 51,
+                        url: <the issue’s url>
+                        title: Add missing argument to invoke JSON,
+                        body: The invoke JSON args only contained the value "go away",
+                        addition: 2,
+                        deletion: 1,
+                        isClosed: True,
+                        comments_count: 1,
+                        comments_url: <the issue’s comments url>,
+                        comments: {
+                                    type: Comment,
+                                    comment_created_at: 2016-04-28T20:23:09,
+                                    author: mr_Jorge,
+                                    author_followers_count: 14,
+                                    url: <the comment url>
+                                    body: thanks!,
+                                    label: positive,
+                                    negative: 0.3224228363291759,
+                                    neutral: 0.3980962568138491,
+                                    positive: 0.6775771636708241,
+                                  },
+                    },
+                    {
+                        type: IssueClosed,
+                        issue_number: 2,
+                        created_at: 2016-04-28T20:23:06,
+                        author: tom_test1,
+                        author_followers_count: 34,
+                    },
+    ]
+}

@@ -172,7 +172,10 @@ def fetch_time_line_data(commit_url, issue_url):
             data = fetch(add_url_query(issue_url, page), True)
             extract_from_issue(data)
 
-        return sorted(time_line_array, key=lambda i: i['created_at'])
+        sorted_time_line = sorted(time_line_array, key=lambda i: i['created_at'])
+        # Utility.export_time_line_data(sorted_time_line)
+
+        return sorted_time_line
 
     except Exception as e:
         Utility.show_progress_message(do_print, 'Error on TimeLine Function: (' + str(e.message) + ')')
@@ -207,6 +210,7 @@ def extract_from_commit(data):
                 comments = extract_from_comment(comments_url, comments_count, True)
 
             entry = {
+                "sha": commitObj['sha'],
                 "url": url,
                 "author": author,
                 "author_followers_count": author_followers_count,
@@ -250,6 +254,7 @@ def extract_from_issue(data):
 
                 state = issueObj['issue']['state']
                 pull_request_url = issueObj['issue']['pull_request']['url']
+                pull_request_commits = pull_request_url+'/commits'
 
                 author = issueObj['issue']['user']['login']
                 author_followers_url = issueObj['issue']['user']['followers_url']
@@ -259,6 +264,8 @@ def extract_from_issue(data):
 
                 # fetch the data from a pr url to extract the needed info
                 data_from_pr_url = fetch(add_url_query(pull_request_url, 1), True)
+                code_change_stats = [data_from_pr_url['additions'], data_from_pr_url['deletions']]
+
                 comments_count = issueObj['issue']['comments']
                 comments_url = issueObj['issue']['comments_url']
                 comments = {}
@@ -286,6 +293,8 @@ def extract_from_issue(data):
 
                     time_line_array.append(entry_closed)
 
+                pre_open_issue_commit(pull_request_commits, code_change_stats, author_followers_count)
+
                 entry = {
                     "issue_number": issue_number,
                     "url": issueObj['issue']['url'],
@@ -301,8 +310,8 @@ def extract_from_issue(data):
                     "comments_count": comments_count,
                     "comments_url": comments_url,
                     "comments": comments,
-                    "addition": data_from_pr_url['additions'],
-                    "deletion": data_from_pr_url['deletions'],
+                    "addition": code_change_stats[0],
+                    "deletion": code_change_stats[1],
                     # Pull request review comments are comments on a portion of the unified diff made during a pull request review.
                     "review_comments_count": data_from_pr_url['review_comments'],
                     "review_comments_url": data_from_pr_url['review_comments_url']
@@ -314,6 +323,32 @@ def extract_from_issue(data):
         Utility.show_progress_message(do_print, 'Error on Issues Function: (' + str(e.message) + ')')
         return []
 
+
+# extract the commit that comes right before the open issue from the open issue's pr url
+def pre_open_issue_commit(url, stats, author_followers_count):
+    try:
+        commits_data = fetch(add_url_query(url, 1), True)[0]
+        entry = {
+            "sha": commits_data['sha'],
+            "url": commits_data['url'],
+            "author": commits_data['commit']['committer']['name'],
+            "author_followers_count": author_followers_count,
+            "created_at": commits_data['commit']['committer']['date'],
+            "message": commits_data['commit']['message'],
+            "isMergePR": False,
+            "type": "Commit",
+            "comments_count": commits_data['commit']['comment_count'],
+            "comments_url": commits_data['comments_url'],
+            "comments": {},
+            "addition": stats[0],
+            "deletion": stats[1]
+        }
+
+        time_line_array.append(entry)
+
+    except Exception as e:
+        Utility.show_progress_message(do_print, 'Error on Pre open Issue Commits: (' + str(e.message) + ')')
+        return {}
 
 # extract data from comments url
 def extract_from_comment(url, comments_count, from_commit):
@@ -442,32 +477,32 @@ if __name__ == "__main__":
 
     do_print = True
 
-    for e in repos.find():
-        i += 1
-        api_call = 0
-
-        repo_commits_count = 0; repo_issues_count = 0; repo_closed_issues_count = 0; repo_commits_comments_count = 0
-        repo_issues_comments_count = 0; commits_positive_comments_count = 0; commits_negative_comments_count = 0
-        issues_positive_comments_count = 0; issues_negative_comments_count = 0; commits_pos_comments_prob_sum = 0
-        commits_neg_comments_prob_sum = 0; commits_neutral_comments_prob_sum = 0; issues_pos_comments_prob_sum = 0
-        issues_neg_comments_prob_sum = 0; issues_neutral_comments_prob_sum = 0
-
-        # filter out the repos with no issues
-        if (e['open_issues_count']) != 0:
-
-            print '-' * 100
-            print 'repo number (' + str(i)+') is in progress'
-            print '-' * 100
-
-            start = time.time()
-            time_line_array = []
-            author_list = []
-            issue_numbers_temp_array = []
-
-            initialize_statistics_counters()
-            create_repo_data_object(e)
-            progress(i)
-            break
+    # for e in repos.find():
+    #     i += 1
+    #     api_call = 0
+    #
+    #     repo_commits_count = 0; repo_issues_count = 0; repo_closed_issues_count = 0; repo_commits_comments_count = 0
+    #     repo_issues_comments_count = 0; commits_positive_comments_count = 0; commits_negative_comments_count = 0
+    #     issues_positive_comments_count = 0; issues_negative_comments_count = 0; commits_pos_comments_prob_sum = 0
+    #     commits_neg_comments_prob_sum = 0; commits_neutral_comments_prob_sum = 0; issues_pos_comments_prob_sum = 0
+    #     issues_neg_comments_prob_sum = 0; issues_neutral_comments_prob_sum = 0
+    #
+    #     # filter out the repos with no issues
+    #     if (e['open_issues_count']) != 0:
+    #
+    #         print '-' * 100
+    #         print 'repo number (' + str(i)+') is in progress'
+    #         print '-' * 100
+    #
+    #         start = time.time()
+    #         time_line_array = []
+    #         author_list = []
+    #         issue_numbers_temp_array = []
+    #
+    #         initialize_statistics_counters()
+    #         create_repo_data_object(e)
+    #         progress(i)
+    #         break
 
 
 # add to issues (addition/deletion/comments url/ comments_count)
@@ -486,12 +521,17 @@ if __name__ == "__main__":
 # sort functions (try to find a way to use utility class for utility functions)
 # commenter and committer details
 # look around releases / milestones to check other users' reviews about the product
+# document the data model for commit, issues, and comment
+# review comments should be included (Answer: Not really, we can the url instead if any review available)
+# Really Really important: I feel some commits are missing -> found it (it's pre open issue commits)
+# include pre open issue commits
+# include message/body/title in the spreadsheet
 
 ########################################################################################################################
 
-# document the data model for commit, issues, and comment
-# review comments should be included
-# sketch how they are lay down on the time line
+# include the time took for an issue to be closed (preferably in issue closed)
+# define a def to export the time-line and the type of the event for each repo
+# sketch how they are laid down on the repo's time line
 # write down all possible statistic work possible that I can think of here (document the statistics as well)
 # Think about creating a model that represents the current data model (repo time line)
 # How can I improve the model?
@@ -504,3 +544,11 @@ if __name__ == "__main__":
 # setup an overleaf initial paper
 
 
+    Utility.export_time_line_data([], 'pr35')
+    # print Utility.change_date_to_string('2016-04-27T18:30:27Z')
+
+
+    # Findings:
+    # Issue open = Pull request
+    # issue open is a commit
+    # issue close is a commit that merges a pull request
