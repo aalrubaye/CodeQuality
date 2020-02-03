@@ -288,7 +288,8 @@ def extract_from_issue(data):
                         "created_at": issueObj['issue']['closed_at'],
                         "author": closed_by,
                         "author_followers_count": close_author_followers_count,
-                        "type": "IssueClosed"
+                        "type": "IssueClosed",
+                        "seconds_to_close": Utility.time_diff(issueObj['issue']['closed_at'], issueObj['issue']['created_at'])
                     }
 
                     time_line_array.append(entry_closed)
@@ -349,6 +350,7 @@ def pre_open_issue_commit(url, stats, author_followers_count):
     except Exception as e:
         Utility.show_progress_message(do_print, 'Error on Pre open Issue Commits: (' + str(e.message) + ')')
         return {}
+
 
 # extract data from comments url
 def extract_from_comment(url, comments_count, from_commit):
@@ -477,32 +479,32 @@ if __name__ == "__main__":
 
     do_print = True
 
-    # for e in repos.find():
-    #     i += 1
-    #     api_call = 0
-    #
-    #     repo_commits_count = 0; repo_issues_count = 0; repo_closed_issues_count = 0; repo_commits_comments_count = 0
-    #     repo_issues_comments_count = 0; commits_positive_comments_count = 0; commits_negative_comments_count = 0
-    #     issues_positive_comments_count = 0; issues_negative_comments_count = 0; commits_pos_comments_prob_sum = 0
-    #     commits_neg_comments_prob_sum = 0; commits_neutral_comments_prob_sum = 0; issues_pos_comments_prob_sum = 0
-    #     issues_neg_comments_prob_sum = 0; issues_neutral_comments_prob_sum = 0
-    #
-    #     # filter out the repos with no issues
-    #     if (e['open_issues_count']) != 0:
-    #
-    #         print '-' * 100
-    #         print 'repo number (' + str(i)+') is in progress'
-    #         print '-' * 100
-    #
-    #         start = time.time()
-    #         time_line_array = []
-    #         author_list = []
-    #         issue_numbers_temp_array = []
-    #
-    #         initialize_statistics_counters()
-    #         create_repo_data_object(e)
-    #         progress(i)
-    #         break
+    for e in repos.find():
+        i += 1
+        api_call = 0
+
+        repo_commits_count = 0; repo_issues_count = 0; repo_closed_issues_count = 0; repo_commits_comments_count = 0
+        repo_issues_comments_count = 0; commits_positive_comments_count = 0; commits_negative_comments_count = 0
+        issues_positive_comments_count = 0; issues_negative_comments_count = 0; commits_pos_comments_prob_sum = 0
+        commits_neg_comments_prob_sum = 0; commits_neutral_comments_prob_sum = 0; issues_pos_comments_prob_sum = 0
+        issues_neg_comments_prob_sum = 0; issues_neutral_comments_prob_sum = 0
+
+        # filter out the repos with no issues
+        if (e['open_issues_count']) != 0:
+
+            print '-' * 100
+            print 'repo number (' + str(i)+') is in progress'
+            print '-' * 100
+
+            start = time.time()
+            time_line_array = []
+            author_list = []
+            issue_numbers_temp_array = []
+
+            initialize_statistics_counters()
+            create_repo_data_object(e)
+            progress(i)
+            break
 
 
 # add to issues (addition/deletion/comments url/ comments_count)
@@ -527,6 +529,7 @@ if __name__ == "__main__":
 # include pre open issue commits
 # include message/body/title in the spreadsheet
 
+
 ########################################################################################################################
 
 # include the time took for an issue to be closed (preferably in issue closed)
@@ -543,12 +546,12 @@ if __name__ == "__main__":
 # Very last step, is to make sure you add each entry for each repo in a MongoDB
 # setup an overleaf initial paper
 
-
-    Utility.export_time_line_data([], 'pr35')
+    # Utility.export_time_line_data([], 'pr35')
     # print Utility.change_date_to_string('2016-04-27T18:30:27Z')
 
-
+#*********************************************************************
     # Findings:
     # Issue open = Pull request
     # issue open is a commit
     # issue close is a commit that merges a pull request
+#*********************************************************************
