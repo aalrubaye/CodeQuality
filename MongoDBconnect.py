@@ -319,6 +319,7 @@ def extract_from_issue(data):
                     "comments": comments,
                     "addition": code_change_stats[0],
                     "deletion": code_change_stats[1],
+                    "number_of_commits": data_from_pr_url['commits'],
                     # Pull request review comments are comments on a portion of the unified diff made during a pull request review.
                     "review_comments_count": data_from_pr_url['review_comments'],
                     "review_comments_url": data_from_pr_url['review_comments_url']
@@ -536,13 +537,13 @@ if __name__ == "__main__":
 # include message/body/title in the spreadsheet
 # include the time took for an issue to be closed (preferably in issue closed)
 # define a def to export the time-line and the type of the event for each repo
-
+# associate number of commits for each issue
 
 ########################################################################################################################
 
 # Fix fetching commits for each PR
 # Associate issue number with each commit
-# associate number of commits for each issue
+# get rid of the repeated commits
 # sketch how they are laid down on the repo's time line (Does it make sense to use Gephi?)
 # write down all possible statistic work that I can think of here (document the statistics as well)
 # Think about creating a model that represents the current data model (repo time line)
