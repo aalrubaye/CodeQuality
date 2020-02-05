@@ -269,6 +269,9 @@ def extract_from_issue(data):
                 comments_count = issueObj['issue']['comments']
                 comments_url = issueObj['issue']['comments_url']
                 comments = {}
+
+                seconds_to_closed = None
+
                 if comments_count > 0:
                     comments = extract_from_comment(comments_url, comments_count, False)
 
@@ -283,13 +286,15 @@ def extract_from_issue(data):
                         close_author_url = issueObj['actor']['followers_url']
                         close_author_followers_count = fetch_authors_followers_count(closed_by, close_author_url)
 
+                    seconds_to_closed = Utility.time_diff(issueObj['issue']['closed_at'], issueObj['issue']['created_at'])
+
                     entry_closed = {
                         "issue_number": issue_number,
                         "created_at": issueObj['issue']['closed_at'],
                         "author": closed_by,
                         "author_followers_count": close_author_followers_count,
                         "type": "IssueClosed",
-                        "seconds_to_close": Utility.time_diff(issueObj['issue']['closed_at'], issueObj['issue']['created_at'])
+                        "seconds_to_close": seconds_to_closed
                     }
 
                     time_line_array.append(entry_closed)
@@ -306,6 +311,7 @@ def extract_from_issue(data):
                     "author_followers_count": author_followers_count,
                     "created_at": issueObj['issue']['created_at'],
                     "isClosed": True if state == 'closed' else False,
+                    "seconds_to_close": seconds_to_closed,
                     "type": "IssueOpened",
                     # You apply commit comments directly to a commit and you apply issue comments without referencing a portion of the unified diff.
                     "comments_count": comments_count,
@@ -528,14 +534,14 @@ if __name__ == "__main__":
 # Really Really important: I feel some commits are missing -> found it (it's pre open issue commits)
 # include pre open issue commits
 # include message/body/title in the spreadsheet
+# include the time took for an issue to be closed (preferably in issue closed)
+# define a def to export the time-line and the type of the event for each repo
 
 
 ########################################################################################################################
 
-# include the time took for an issue to be closed (preferably in issue closed)
-# define a def to export the time-line and the type of the event for each repo
-# sketch how they are laid down on the repo's time line
-# write down all possible statistic work possible that I can think of here (document the statistics as well)
+# sketch how they are laid down on the repo's time line (Does it make sense to use Gephi?)
+# write down all possible statistic work that I can think of here (document the statistics as well)
 # Think about creating a model that represents the current data model (repo time line)
 # How can I improve the model?
 # repo popularity (stars) evolution/history (in order to see if it's related to the code quality)
