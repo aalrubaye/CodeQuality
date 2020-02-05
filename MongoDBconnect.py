@@ -201,13 +201,13 @@ def extract_from_commit(data):
 
             Utility.show_progress_message(do_print, 'Commit from: ' + str(author) + '...')
 
-            # Fetch some information from each individual commits urls
-            data_from_commit_url = fetch(add_url_query(url, 1), True)
-            comments_count = data_from_commit_url['commit']['comment_count']
-            comments_url = data_from_commit_url['comments_url']
-            comments = {}
-            if comments_count > 0:
-                comments = extract_from_comment(comments_url, comments_count, True)
+            # # Fetch some information from each individual commits urls
+            # data_from_commit_url = fetch(add_url_query(url, 1), True)
+            # comments_count = data_from_commit_url['commit']['comment_count']
+            # comments_url = data_from_commit_url['comments_url']
+            # comments = {}
+            # if comments_count > 0:
+            #     comments = extract_from_comment(comments_url, comments_count, True)
 
             entry = {
                 "sha": commitObj['sha'],
@@ -218,12 +218,13 @@ def extract_from_commit(data):
                 "message": message,
                 "isMergePR": True if "Merge pull request #" in message else False,
                 "type": "Commit",
+                "issue_number": None
                 # You apply commit comments directly to a commit and you apply issue comments without referencing a portion of the unified diff.
-                "comments_count": comments_count,
-                "comments_url": comments_url,
-                "comments": comments,
-                "addition": data_from_commit_url['stats']['additions'],
-                "deletion": data_from_commit_url['stats']['deletions']
+                # "comments_count": comments_count,
+                # "comments_url": comments_url,
+                # "comments": comments,
+                # "addition": data_from_commit_url['stats']['additions'],
+                # "deletion": data_from_commit_url['stats']['deletions']
             }
 
             time_line_array.append(entry)
@@ -264,7 +265,6 @@ def extract_from_issue(data):
 
                 # fetch the data from a pr url to extract the needed info
                 data_from_pr_url = fetch(add_url_query(pull_request_url, 1), True)
-                code_change_stats = [data_from_pr_url['additions'], data_from_pr_url['deletions']]
 
                 comments_count = issueObj['issue']['comments']
                 comments_url = issueObj['issue']['comments_url']
@@ -299,7 +299,7 @@ def extract_from_issue(data):
 
                     time_line_array.append(entry_closed)
 
-                fetch_issue_commit(pull_request_commits, code_change_stats, author_followers_count)
+                fetch_issue_pr_commit(issue_number, pull_request_commits, author, author_followers_count)
 
                 entry = {
                     "issue_number": issue_number,
@@ -313,13 +313,13 @@ def extract_from_issue(data):
                     "isClosed": True if state == 'closed' else False,
                     "seconds_to_close": seconds_to_closed,
                     "type": "IssueOpened",
+                    "commits_count": data_from_pr_url['commits'],
                     # You apply commit comments directly to a commit and you apply issue comments without referencing a portion of the unified diff.
                     "comments_count": comments_count,
                     "comments_url": comments_url,
                     "comments": comments,
-                    "addition": code_change_stats[0],
-                    "deletion": code_change_stats[1],
-                    "number_of_commits": data_from_pr_url['commits'],
+                    "addition": data_from_pr_url['additions'],
+                    "deletion": data_from_pr_url['deletions'],
                     # Pull request review comments are comments on a portion of the unified diff made during a pull request review.
                     "review_comments_count": data_from_pr_url['review_comments'],
                     "review_comments_url": data_from_pr_url['review_comments_url']
@@ -333,26 +333,36 @@ def extract_from_issue(data):
 
 
 # extract the commit that comes right before the open issue from the open issue's pr url
-def fetch_issue_commit(url, stats, author_followers_count):
+def fetch_issue_pr_commit(issue_number, url, pr_author, pr_author_followers_count):
     try:
-        commits_data = fetch(add_url_query(url, 1), True)[0]
-        entry = {
-            "sha": commits_data['sha'],
-            "url": commits_data['url'],
-            "author": commits_data['commit']['committer']['name'],
-            "author_followers_count": author_followers_count,
-            "created_at": commits_data['commit']['committer']['date'],
-            "message": commits_data['commit']['message'],
-            "isMergePR": False,
-            "type": "Commit",
-            "comments_count": commits_data['commit']['comment_count'],
-            "comments_url": commits_data['comments_url'],
-            "comments": {},
-            "addition": stats[0],
-            "deletion": stats[1]
-        }
+        commits_data = fetch(add_url_query(url, 1), True)
 
-        time_line_array.append(entry)
+        for cmt in commits_data:
+            author = cmt['author']
+            if author is None:
+                author_id = pr_author
+                author_followers_count = pr_author_followers_count
+            else:
+                author_id = author['login']
+                author_followers_url = author['followers_url']
+                author_followers_count = fetch_authors_followers_count(author_id, author_followers_url)
+
+            entry = {
+                "sha": cmt['sha'],
+                "url": cmt['url'],
+                "author": author_id,
+                "author_followers_count": author_followers_count,
+                "created_at": cmt['commit']['author']['date'],
+                "message": cmt['commit']['message'],
+                "isMergePR": True if "Merge pull request #" in cmt['commit']['message'] else False,
+                "type": "Commit",
+                # "comments_count": cmt['commit']['comment_count'],
+                # "comments_url": cmt['comments_url'],
+                # "comments": {},
+                "issue_number": issue_number
+            }
+
+            time_line_array.append(entry)
 
     except Exception as e:
         Utility.show_progress_message(do_print, 'Error on Pre open Issue Commits: (' + str(e.message) + ')')
@@ -538,16 +548,18 @@ if __name__ == "__main__":
 # include the time took for an issue to be closed (preferably in issue closed)
 # define a def to export the time-line and the type of the event for each repo
 # associate number of commits for each issue
+# add comments to the commits in the def fetch_issue_pr_commit  -> not needed anymore
+# Associate issue number with each commit
+# Fix fetching commits for each PR
+# sketch how they are laid down on the repo's time line (Does it make sense to use Gephi?)
 
 ########################################################################################################################
 
-# Fix fetching commits for each PR
-# Associate issue number with each commit
 # get rid of the repeated commits
-# sketch how they are laid down on the repo's time line (Does it make sense to use Gephi?)
 # write down all possible statistic work that I can think of here (document the statistics as well)
 # Think about creating a model that represents the current data model (repo time line)
 # How can I improve the model?
+# now sketch one more time
 # repo popularity (stars) evolution/history (in order to see if it's related to the code quality)
 # How can we make the code more efficient related to its number of calls to Github API
 # make sure to use multiple threads via using different Github API accounts to get more data within less time
