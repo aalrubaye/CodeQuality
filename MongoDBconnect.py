@@ -299,7 +299,7 @@ def extract_from_issue(data):
 
                     time_line_array.append(entry_closed)
 
-                pre_open_issue_commit(pull_request_commits, code_change_stats, author_followers_count)
+                fetch_issue_commit(pull_request_commits, code_change_stats, author_followers_count)
 
                 entry = {
                     "issue_number": issue_number,
@@ -332,7 +332,7 @@ def extract_from_issue(data):
 
 
 # extract the commit that comes right before the open issue from the open issue's pr url
-def pre_open_issue_commit(url, stats, author_followers_count):
+def fetch_issue_commit(url, stats, author_followers_count):
     try:
         commits_data = fetch(add_url_query(url, 1), True)[0]
         entry = {
@@ -540,6 +540,9 @@ if __name__ == "__main__":
 
 ########################################################################################################################
 
+# Fix fetching commits for each PR
+# Associate issue number with each commit
+# associate number of commits for each issue
 # sketch how they are laid down on the repo's time line (Does it make sense to use Gephi?)
 # write down all possible statistic work that I can think of here (document the statistics as well)
 # Think about creating a model that represents the current data model (repo time line)
