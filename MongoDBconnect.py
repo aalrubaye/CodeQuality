@@ -555,6 +555,7 @@ if __name__ == "__main__":
 
 ########################################################################################################################
 
+# update the data model
 # get rid of the repeated commits
 # write down all possible statistic work that I can think of here (document the statistics as well)
 # Think about creating a model that represents the current data model (repo time line)
