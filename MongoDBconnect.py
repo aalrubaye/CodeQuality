@@ -1,12 +1,10 @@
 import json
 import pprint
 import urllib2
-from datetime import datetime
 import time
 import simplejson
 from pymongo import MongoClient
 import urllib
-import sys
 import Utility
 
 __author__ = 'Abdul Rubaye'
@@ -18,7 +16,10 @@ pull_requests = database.pull_requests
 events = database.events
 commits = database.commits.bson
 commit_comments = database.commit_comments
-global time_line_array, issue_numbers_temp_array, api_call, start, author_list, do_print, sha_list
+
+time_line_db = database.time_line
+
+global time_line_array, issue_numbers_temp_array, api_call, start, author_list, do_print, sha_list, starting_apicall
 global repo_commits_count, repo_issues_count, repo_closed_issues_count, repo_commits_comments_count, repo_issues_comments_count
 global commits_positive_comments_count, commits_negative_comments_count, issues_positive_comments_count, issues_negative_comments_count
 global commits_pos_comments_prob_sum, commits_neg_comments_prob_sum, commits_neutral_comments_prob_sum
@@ -34,8 +35,18 @@ client_secret = privateVar.split('\n', 1)[1]
 
 # fetch how many more calls we have for the hour
 def git_api_rate_limit():
-    data = fetch(add_url_query("https://api.github.com/rate_limit", 1), False)
-    return data['rate']['remaining']
+    url = add_url_query("https://api.github.com/rate_limit", 1)
+    try:
+        request = urllib2.Request(url, headers={"Accept": "application/vnd.github.v3.star+json"})
+        response = urllib2.urlopen(request)
+        data = simplejson.load(response)
+        return data['rate']['remaining']
+    except urllib2.URLError, e:
+        Utility.show_progress_message(do_print, 'Error on Fetch Function: (' + str(e.message) + ')')
+        return 0
+
+    # data = fetch(add_url_query("https://api.github.com/rate_limit", 1), False)
+    # return data['rate']['remaining']
 
 
 # appends the client id and the client secret to urls
@@ -55,11 +66,21 @@ def fetch(url, count_call):
         response = urllib2.urlopen(request)
         data = simplejson.load(response)
         if count_call:
-            api_call += 1
+            api_call -= 1
         return data
     except urllib2.URLError, e:
         Utility.show_progress_message(do_print, 'Error on Fetch Function: (' + str(e.message) + ')')
         return None
+
+
+# Wait function wo make sure we are not exceeding the github API limit
+def pause_if_limit_exceeded():
+    global api_call
+
+    while api_call < 50:
+        print 'The rate limit exceeded. Please wait...'
+        api_call = git_api_rate_limit()
+        time.sleep(120)
 
 
 # create a row in our repo data object
@@ -72,11 +93,19 @@ def create_repo_data_object(repo):
     else:
         issue_events_url = repo['issue_events_url'][0:len(repo['issue_events_url']) - 9],
         commits_url = repo['commits_url'][0:len(repo['commits_url']) - 6],
+        owner = repo['owner']['login']
+        owner_followers_url = repo['owner']['followers_url']
+        owner_followers_count = fetch_authors_followers_count(owner, owner_followers_url)
+        repo_contributors_url = repo['contributors_url']
+        repo_contributors_count = fetch_repo_contributors_count(repo_contributors_url)
+        time_line_entries = fetch_time_line_data(commits_url, issue_events_url)
 
         entry = {
             "name": repo['name'],
             "language": repo['language'],
             "owner": repo['owner']['login'],
+            "owner_followers_count": owner_followers_count,
+            "contributors_count": repo_contributors_count,
             "created_at": repo['created_at'],
             "urls": {
                 "repo_url": repo['url'],
@@ -88,7 +117,7 @@ def create_repo_data_object(repo):
                 "forks": repo['forks_count'],
                 "stars": repo['stargazers_count']
             },
-            "time_line": fetch_time_line_data(commits_url, issue_events_url),
+            "time_line": time_line_entries,
             "statistics": {
                 "total_commits": repo_commits_count,
                 "total_issues": repo_issues_count,
@@ -107,8 +136,29 @@ def create_repo_data_object(repo):
                 "issues_neutral_comments_prob_sum": issues_neutral_comments_prob_sum
             }
         }
-        print
-        pprint.pprint(entry)
+
+        if len(time_line_entries) > 0:
+            time_line_db.insert(entry)
+
+
+# return the number of repos contributors
+def fetch_repo_contributors_count(url):
+    try:
+        count = 0
+        page = 1
+        data = fetch(add_url_query(url, page), True)
+
+        while len(list(data)) == 100:
+            count += 100
+            page += 1
+            data = fetch(add_url_query(url, page), True)
+
+        count += len(list(data))
+        return count
+
+    except Exception as e:
+        Utility.show_progress_message(do_print, 'Error on Fetching Contributors Count: (' + str(e.message) + ')')
+        return 0
 
 
 # Fetch num of committer's followers
@@ -456,8 +506,8 @@ def progress(repo_num):
     print
     print '#' * 100
     print 'repository num  = ' + str(repo_num)
-    print 'limit remaining = ' + str(git_api_rate_limit())
-    print 'api calls took  = ' + str(api_call)
+    print 'limit remaining = ' + str(api_call)
+    print 'api calls took  = ' + str(starting_apicall - api_call)
     print 'time elapsed    = ' + Utility.time_elapsed(start)
     print '#' * 100
     print
@@ -489,39 +539,50 @@ def initialize_statistics_counters():
 
 # The main function
 if __name__ == "__main__":
-    i = 0
-    global start, author_list, do_print
 
+    global start, author_list, do_print, starting_apicall
     do_print = True
 
-    # for e in repos.find():
-    #     i += 1
-    #     api_call = 0
-    #
-    #     repo_commits_count = 0; repo_issues_count = 0; repo_closed_issues_count = 0; repo_commits_comments_count = 0
-    #     repo_issues_comments_count = 0; commits_positive_comments_count = 0; commits_negative_comments_count = 0
-    #     issues_positive_comments_count = 0; issues_negative_comments_count = 0; commits_pos_comments_prob_sum = 0
-    #     commits_neg_comments_prob_sum = 0; commits_neutral_comments_prob_sum = 0; issues_pos_comments_prob_sum = 0
-    #     issues_neg_comments_prob_sum = 0; issues_neutral_comments_prob_sum = 0
+    offset = 0
+    i = offset
+    # repos.count() = 78222
 
-        # # filter out the repos with no issues
-        # if (e['open_issues_count']) != 0:
-        #
-        #     print '-' * 100
-        #     print 'repo number (' + str(i)+') is in progress'
-        #     print '-' * 100
-        #
-        #     start = time.time()
-        #     time_line_array = []
-        #     author_list = []
-        #     sha_list = []
-        #     issue_numbers_temp_array = []
-        #
-        #     initialize_statistics_counters()
-        #     create_repo_data_object(e)
-        #     progress(i)
-        #     break
+    # Thread_1=[0:5000]
+    # Thread_2=[5001:10000]
 
+    for e in repos.find()[offset:repos.count()]:
+
+        repo_commits_count = 0; repo_issues_count = 0; repo_closed_issues_count = 0; repo_commits_comments_count = 0
+        repo_issues_comments_count = 0; commits_positive_comments_count = 0; commits_negative_comments_count = 0
+        issues_positive_comments_count = 0; issues_negative_comments_count = 0; commits_pos_comments_prob_sum = 0
+        commits_neg_comments_prob_sum = 0; commits_neutral_comments_prob_sum = 0; issues_pos_comments_prob_sum = 0
+        issues_neg_comments_prob_sum = 0; issues_neutral_comments_prob_sum = 0
+
+        # filter out the repos with no issues
+        if (e['open_issues_count']) != 0:
+            api_call = git_api_rate_limit()
+            starting_apicall = api_call
+
+            print '-' * 100
+            print 'repo number (' + str(i) + ') is in progress'
+            print '-' * 100
+
+            start = time.time()
+            time_line_array = []
+            author_list = []
+            sha_list = []
+            issue_numbers_temp_array = []
+
+            initialize_statistics_counters()
+            create_repo_data_object(e)
+            progress(i)
+            # break
+        i += 1
+
+
+
+########################################################################################################################
+# TODO Done
 
 # add to issues (addition/deletion/comments url/ comments_count)
 # document the difference between issue and pull request (Answer: They are the same)
@@ -553,23 +614,45 @@ if __name__ == "__main__":
 # sketch how they are laid down on the repo's time line (Does it make sense to use Gephi?)
 # update the data model
 # get rid of the repeated commits (Merge commits + repeated sha's)
+# Repeated Commits should count as 1
+# Define commit, comment, and Issue then talk about issueOpen, issueClose and their different
+# repo contributor list/count
+# repo owner followers count
+# write down all possible statistic work that I can think of here (document the statistics as well)
+# Raise questions about everything
+# What is code quality? what can affect code quality? how to measure code quality?
+# sample run to check potential errors (10 repos)
+# add back pr review to issue data model -> Not needed
+# Think about creating a model that represents the current data model (repo time line)
+# How can I improve the model? Answers are is the doc
+# now sketch one more time (Cannot do this now)
+# repo popularity (stars) evolution/history (in order to see if it's related to the code quality) -> Don't need it now
+# timer for Github API calls to not exceed the limit
+# make sure to use multiple threads via using different Github API accounts to get more data within less time
+# Make sure you add each entry for each repo in a MongoDB
+
 
 ########################################################################################################################
+# TODO In progress:
 
-# Repeated Commits should count as 1
-# write down all possible statistic work that I can think of here (document the statistics as well)
-# Think about creating a model that represents the current data model (repo time line)
-# How can I improve the model?
-# now sketch one more time
-# repo popularity (stars) evolution/history (in order to see if it's related to the code quality)
+
+########################################################################################################################
+# TODO
+
+# research about ML's prediction models to find one suitable for this work (https://www.youtube.com/watch?v=Ogh_lxM58rw)
+            # important to watch: https://www.youtube.com/watch?v=JU9saQ8D8is
+    # If you are trying to predict a continuous target, then you will need a regression model.
+    # But if you are trying to predict a discrete target, then you will need a classification model.
+    # https://towardsdatascience.com/the-beginners-guide-to-selecting-machine-learning-predictive-models-in-python-f2eb594e4ddc
+    # https://machinelearningmastery.com/make-predictions-scikit-learn/
+# Think of a data set to train in a ML model
+# our approach to measure code quality
 # How can we make the code more efficient related to its number of calls to Github API
-# make sure to use multiple threads via using different Github API accounts to get more data within less time
-# sample run to check potential errors
-# timer for Github API calls to not exceed the limit
-# Very last step, is to make sure you add each entry for each repo in a MongoDB
 # setup an overleaf initial paper
 
-    Utility.export_time_line_data([], 'pr35')
+
+
+    # Utility.export_time_line_data([], 'pr35')
     # print Utility.change_date_to_string('2016-04-27T18:30:27Z')
 
 #*********************************************************************
