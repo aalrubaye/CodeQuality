@@ -3,9 +3,10 @@ import json
 from textblob import TextBlob
 import urllib
 
+
 t1 = "Very good!"
 t2 = "the code looks just fine!"
-t3 = "fine"
+t3 = "not fine"
 
 
 #TextBlob
@@ -28,9 +29,9 @@ data3 = urllib.urlencode({"text": t3})
 u = urllib.urlopen("http://text-processing.com/api/sentiment/", data)
 u2 = urllib.urlopen("http://text-processing.com/api/sentiment/", data2)
 u3 = urllib.urlopen("http://text-processing.com/api/sentiment/", data3)
-# print u.read()
+print u.read()
 # print u2.read()
 # print u3.read()
 
-t = json.loads(u.read())
-print t
+# t = json.loads(u.read())
+# print t

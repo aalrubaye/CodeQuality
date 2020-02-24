@@ -1,12 +1,10 @@
 import json
 import pprint
-import urllib
-import urllib2
-import urllib3
 import time
 from pymongo import MongoClient
 import urllib
 import Utility
+import sklearn
 
 __author__ = 'Abdul Rubaye'
 
@@ -17,8 +15,6 @@ pull_requests = database.pull_requests
 events = database.events
 commits = database.commits.bson
 commit_comments = database.commit_comments
-
-http = urllib3.PoolManager()
 
 time_line_db = database.time_line
 
@@ -45,7 +41,7 @@ def git_api_rate_limit():
         data = json.loads(json_url.read())
 
         return data['rate']['remaining']
-    except urllib2.URLError, e:
+    except urllib.URLError, e:
         Utility.show_progress_message(do_print, 'Error on Fetch Function: (' + str(e.message) + ')')
         return 0
 
@@ -82,6 +78,9 @@ def pause_if_limit_exceeded():
 
     while api_call < 50:
         print 'The rate limit exceeded. Please wait...'
+        repo_names_write = open("reponames.txt", 'w')
+        repo_names_write.write(repos_str)
+        repo_names_write.close()
         api_call = git_api_rate_limit()
         time.sleep(120)
 
@@ -157,8 +156,8 @@ def create_repo_data_object(repo):
             }
         }
 
-        if len(time_line_entries) > 0:
-            time_line_db.insert(entry)
+        # if len(time_line_entries) > 0:
+        #     time_line_db.insert(entry)
 
 
 # return the number of repos contributors
@@ -297,7 +296,7 @@ def extract_from_issue(data):
             # ensure to exclude the duplicate issues
             if issue_number not in issue_numbers_temp_array:
                 issue_numbers_temp_array.append(issue_number)
-
+                pprint.pprint(issueObj)
                 state = issueObj['issue']['state']
                 pr = issueObj.get('issue').get('pull_request')
 
@@ -318,9 +317,11 @@ def extract_from_issue(data):
                     comments_count = issueObj['issue']['comments']
                     comments_url = issueObj['issue']['comments_url']
                     comments = {}
-
+                    print ('here1')
                     seconds_to_closed = None
                     if comments_count > 0:
+                        print ('here22')
+                        print comments_url
                         comments = extract_from_comment(comments_url, comments_count, False)
 
                     if state == 'closed':
@@ -334,7 +335,7 @@ def extract_from_issue(data):
                             close_author_followers_count = fetch_authors_followers_count(closed_by, close_author_url)
 
                         seconds_to_closed = Utility.time_diff(issueObj['issue']['closed_at'], issueObj['issue']['created_at'])
-
+                        print ('here2')
                         entry_closed = {
                             "issue_number": issue_number,
                             "created_at": issueObj['issue']['closed_at'],
@@ -345,9 +346,9 @@ def extract_from_issue(data):
                         }
 
                         time_line_array.append(entry_closed)
-
+                    print ('here3')
                     fetch_issue_pr_commit(issue_number, pull_request_commits, author, author_followers_count)
-
+                    print ('here4')
                     repo_issues_count += 1
                     entry = {
                         "issue_number": issue_number,
@@ -373,7 +374,7 @@ def extract_from_issue(data):
                         "review_comments_url": data_from_pr_url['review_comments_url']
                     }
 
-                    time_line_array.append(entry)
+                    # time_line_array.append(entry)
 
     except Exception as e:
         Utility.show_progress_message(do_print, 'Error on Issues Function: (' + str(e.message) + ')')
@@ -423,7 +424,7 @@ def fetch_issue_pr_commit(issue_number, url, pr_author, pr_author_followers_coun
                 "issue_number": issue_number
             }
 
-            time_line_array.append(entry)
+            # time_line_array.append(entry)
 
     except Exception as e:
         Utility.show_progress_message(do_print, 'Error on Pre open Issue Commits: (' + str(e.message) + ')')
@@ -434,23 +435,29 @@ def fetch_issue_pr_commit(issue_number, url, pr_author, pr_author_followers_coun
 def extract_from_comment(url, comments_count, from_commit):
 
     global repo_commits_comments_count, repo_issues_comments_count
-
+    print ('here 33')
     data_from_comments = fetch(add_url_query(url, 1), True)
-
+    print ('here 44')
     entry = {}
     if len(data_from_comments) > 0:
+        print ('here 55')
         for comment in data_from_comments:
+            print ('here 66')
             body = comment['body']
+            print body
             st_prob = sentiment_prob(body, from_commit)['probability']
+            print st_prob
             st_label = sentiment_prob(body, from_commit)['label']
-
+            print st_label
             author = comment['user']['login']
+            print author
             author_url = comment['user']['url']
-
+            print author_url
+            print ('here 77')
             author_followers_count = fetch_authors_followers_count(author, author_url)
-
+            print ('here 88')
             Utility.show_progress_message(do_print, 'Comment from: ' + str(author) + '...')
-
+            print ('here 99')
             entry = {
                 'url': comment['url'],
                 'author': author,
@@ -478,16 +485,22 @@ def sentiment_prob(body, from_commit):
     global commits_positive_comments_count, commits_negative_comments_count, issues_positive_comments_count, issues_negative_comments_count
     global commits_pos_comments_prob_sum, commits_neg_comments_prob_sum, commits_neutral_comments_prob_sum
     global issues_pos_comments_prob_sum, issues_neg_comments_prob_sum, issues_neutral_comments_prob_sum
-
+    print 'hello'
     text = urllib.urlencode({"text": body})
+    print 'hello222'
     st = urllib.urlopen("http://text-processing.com/api/sentiment/", text)
-
+    print 'hello43434'
+    print st.read()
     returned_json = json.loads(st.read())
-
+    print 'hello34344'
     positive_prob = returned_json['probability']['pos']
+    print 'hello111'
     neutral_prob = returned_json['probability']['neutral']
+    print 'hello2'
     negative_prob = returned_json['probability']['neg']
+    print 'hello3'
     label = returned_json['label']
+    print 'hello4'
 
     is_positive = 0
     is_negative = 0
@@ -557,8 +570,8 @@ if __name__ == "__main__":
     global start, author_list, do_print, starting_apicall
     do_print = True
 
-    offset = 5851
-    offset_end = 7000
+    offset = 7858
+    offset_end = 7859
     i = offset
     # repos.count() = 78222
 
@@ -578,23 +591,24 @@ if __name__ == "__main__":
         if e['name']+',' not in repos_str:
             repos_str += e['name'] + ','
 
-            api_call = git_api_rate_limit()
-            starting_apicall = api_call
+            if e['open_issues_count'] > 0:
+                api_call = git_api_rate_limit()
+                starting_apicall = api_call
 
-            print '-' * 100
-            print 'repo number (' + str(i) + ') is in progress'
-            print '-' * 100
+                print '-' * 100
+                print 'repo number (' + str(i) + ') is in progress'
+                print '-' * 100
 
-            start = time.time()
-            time_line_array = []
-            author_list = []
-            sha_list = []
-            issue_numbers_temp_array = []
+                start = time.time()
+                time_line_array = []
+                author_list = []
+                sha_list = []
+                issue_numbers_temp_array = []
 
-            initialize_statistics_counters()
+                initialize_statistics_counters()
 
-            create_repo_data_object(e)
-            progress(i)
+                create_repo_data_object(e)
+                progress(i)
         i += 1
 
     repo_names_write = open("reponames.txt", 'w')

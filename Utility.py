@@ -8,10 +8,10 @@ __author__ = 'Abdul Rubaye'
 
 # show or hide print repo progress
 def show_progress_message(do_print, message):
-    # print message
-    if do_print:
-        sys.stdout.write("\r" + message)
-        sys.stdout.flush()
+    print message
+    # if do_print:
+    #     sys.stdout.write("\r" + message)
+    #     sys.stdout.flush()
 
 
 # convert date/time stamp to a regular string
