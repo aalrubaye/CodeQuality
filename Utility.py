@@ -2,6 +2,7 @@ import sys
 from datetime import datetime
 import time
 import xlwt
+from textblob import TextBlob
 
 __author__ = 'Abdul Rubaye'
 
@@ -12,6 +13,29 @@ def show_progress_message(do_print, message):
     # if do_print:
     #     sys.stdout.write("\r" + message)
     #     sys.stdout.flush()
+
+
+# return the sentiment score of a comment
+def sentiment_score(body):
+    text = TextBlob(body)
+    polarity = text.sentiment.polarity
+    if -1 <= polarity < -0.5:
+        label = 'very bad'
+    elif -0.5 <= polarity < -0.1:
+        label = 'bad'
+    elif -0.1 <= polarity < 0.2:
+        label = 'ok'
+    elif 0.2 <= polarity < 0.6:
+        label = 'good'
+    elif 0.6 <= polarity <= 1:
+        label = 'positive'
+
+    senti_obj = {
+        'score': polarity,
+        'label': label
+    }
+
+    return senti_obj
 
 
 # convert date/time stamp to a regular string

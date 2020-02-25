@@ -1,34 +1,23 @@
 import json
-import pprint
 import time
 from pymongo import MongoClient
 import urllib
 import Utility
-import sklearn
+import pprint
 
-__author__ = 'Abdul Rubaye'
+__author__ = 'Abduljaleel Al Rubaye'
 
 client = MongoClient()
 database = client.github_data
 repos = database.repos
-pull_requests = database.pull_requests
-events = database.events
-commits = database.commits.bson
-commit_comments = database.commit_comments
-
 time_line_db = database.time_line
 
 global time_line_array, issue_numbers_temp_array, api_call, start, author_list, do_print, sha_list, starting_apicall, repos_str
-global repo_commits_count, repo_issues_count, repo_closed_issues_count, repo_commits_comments_count, repo_issues_comments_count
-global commits_positive_comments_count, commits_negative_comments_count, issues_positive_comments_count, issues_negative_comments_count
-global commits_pos_comments_prob_sum, commits_neg_comments_prob_sum, commits_neutral_comments_prob_sum
-global issues_pos_comments_prob_sum, issues_neg_comments_prob_sum, issues_neutral_comments_prob_sum
+global repo_commits_count, repo_issues_count, repo_closed_issues_count, repo_issues_comments_count
 
-# client id and client secret are used in calling the github API
-# they will help to raise the maximum limit of calls per hour
-# note: you will need your private txt file that includes the private keys
 privateVar = open("privateVar.txt", 'r').read()
 # privateVar = open("privateVar2.txt", 'r').read()
+
 client_id = privateVar.split('\n', 1)[0]
 client_secret = privateVar.split('\n', 1)[1]
 
@@ -39,10 +28,10 @@ def git_api_rate_limit():
     try:
         json_url = urllib.urlopen(url)
         data = json.loads(json_url.read())
-
+        #
         return data['rate']['remaining']
-    except urllib.URLError, e:
-        Utility.show_progress_message(do_print, 'Error on Fetch Function: (' + str(e.message) + ')')
+    except urllib.URLError, er:
+        Utility.show_progress_message(do_print, 'Error on Fetch Function: (' + str(er.message) + ')')
         return 0
 
 
@@ -67,8 +56,8 @@ def fetch(url, count_call):
         if count_call:
             api_call -= 1
         return data
-    except urllib2.URLError, e:
-        Utility.show_progress_message(do_print, 'Error on Fetch Function: (' + str(e.message) + ')')
+    except urllib.URLError, er:
+        Utility.show_progress_message(do_print, 'Error on Fetch Function: (' + str(er.message) + ')')
         return None
 
 
@@ -78,9 +67,9 @@ def pause_if_limit_exceeded():
 
     while api_call < 50:
         print 'The rate limit exceeded. Please wait...'
-        repo_names_write = open("reponames.txt", 'w')
-        repo_names_write.write(repos_str)
-        repo_names_write.close()
+        repo_names_w = open("reponames.txt", 'w')
+        repo_names_w.write(repos_str)
+        repo_names_w.close()
         api_call = git_api_rate_limit()
         time.sleep(120)
 
@@ -95,8 +84,8 @@ def verify_repo_still_exists(repo):
             return True
         else:
             return False
-    except Exception as e:
-        Utility.show_progress_message(do_print, 'The repo does not exist anymore: (' + str(e.message) + ')')
+    except Exception as er:
+        Utility.show_progress_message(do_print, 'The repo does not exist anymore: (' + str(er.message) + ')')
         return False
 
 
@@ -107,8 +96,6 @@ def create_repo_data_object(repo):
     if verify_repo_still_exists(repo) is False:
         return []
     else:
-        # issue = repo.get('issue_events_url')
-        # commit = repo.get('commits_url')
         issue_events_url = repo['issue_events_url'][0:len(repo['issue_events_url']) - 9]
         commits_url = repo['commits_url'][0:len(repo['commits_url']) - 6]
         owner = repo['owner']['login']
@@ -138,26 +125,15 @@ def create_repo_data_object(repo):
             },
             "time_line": time_line_entries,
             "statistics": {
-                "total_commits": repo_commits_count,
+                "total_commits": repo_commits_count+1,
                 "total_issues": repo_issues_count,
                 "total_closed_issues": repo_closed_issues_count,
-                "total_commits_comments": repo_commits_comments_count,
-                "total_issues_comments": repo_issues_comments_count,
-                "total_pos_commit_comments": commits_positive_comments_count,
-                "total_neg_commit_comments": commits_negative_comments_count,
-                "total_pos_issues_comments": issues_positive_comments_count,
-                "total_neg_issues_comments": issues_negative_comments_count,
-                "commits_pos_comments_prob_sum": commits_pos_comments_prob_sum,
-                "commits_neg_comments_prob_sum": commits_neg_comments_prob_sum,
-                "commits_neutral_comments_prob_sum": commits_neutral_comments_prob_sum,
-                "issues_pos_comments_prob_sum": issues_pos_comments_prob_sum,
-                "issues_neg_comments_prob_sum": issues_neg_comments_prob_sum,
-                "issues_neutral_comments_prob_sum": issues_neutral_comments_prob_sum
+                "total_issues_comments": repo_issues_comments_count
             }
         }
 
-        # if len(time_line_entries) > 0:
-        #     time_line_db.insert(entry)
+        if len(time_line_entries) > 0:
+            time_line_db.insert(entry)
 
 
 # return the number of repos contributors
@@ -175,8 +151,8 @@ def fetch_repo_contributors_count(url):
         count += len(list(data))
         return count
 
-    except Exception as e:
-        Utility.show_progress_message(do_print, 'Error on Fetching Contributors Count: (' + str(e.message) + ')')
+    except Exception as er:
+        Utility.show_progress_message(do_print, 'Error on Fetching Contributors Count: (' + str(er.message) + ')')
         return 0
 
 
@@ -196,8 +172,8 @@ def fetch_authors_followers_count(author, url):
             author_list.append(entry)
             return count
 
-        except Exception as e:
-            Utility.show_progress_message(do_print, 'Error on Authors Count Function: (' + str(e.message) + ')')
+        except Exception as er:
+            Utility.show_progress_message(do_print, 'Error on Authors Count Function: (' + str(er.message) + ')')
             return 0
     else:
         return search_author['followers']
@@ -232,13 +208,13 @@ def fetch_time_line_data(commit_url, issue_url):
             data = fetch(add_url_query(commit_url, page), True)
             extract_from_commit(data)
 
-        sorted_time_line = sorted(time_line_array, key=lambda i: i['created_at'])
+        sorted_time_line = sorted(time_line_array, key=lambda l: l['created_at'])
         # Utility.export_time_line_data(sorted_time_line)
 
         return sorted_time_line
 
-    except Exception as e:
-        Utility.show_progress_message(do_print, 'Error on TimeLine Function: (' + str(e.message) + ')')
+    except Exception as er:
+        Utility.show_progress_message(do_print, 'Error on TimeLine Function: (' + str(er.message) + ')')
         return []
 
 
@@ -256,30 +232,30 @@ def extract_from_commit(data):
                     repo_commits_count += 1
                     sha_list.append(sha)
 
-                date = commitObj['commit']['author']['date']
-                url = commitObj['url']
-                author = commitObj['author']['login']
-                author_url = commitObj['author']['url']
+                    date = commitObj['commit']['author']['date']
+                    url = commitObj['url']
+                    author = commitObj['author']['login']
+                    author_url = commitObj['author']['url']
 
-                author_followers_count = fetch_authors_followers_count(author, author_url)
+                    author_followers_count = fetch_authors_followers_count(author, author_url)
 
-                Utility.show_progress_message(do_print, 'Commit from: ' + str(author) + '...')
+                    Utility.show_progress_message(do_print, 'Commit from: ' + str(author) + '...')
 
-                entry = {
-                    "sha": sha,
-                    "url": url,
-                    "author": author,
-                    "author_followers_count": author_followers_count,
-                    "created_at": date,
-                    "message": message,
-                    "type": "Commit",
-                    "issue_number": None
-                }
+                    entry = {
+                        "sha": sha,
+                        "url": url,
+                        "author": author,
+                        "author_followers_count": author_followers_count,
+                        "created_at": date,
+                        "message": message,
+                        "type": "Commit",
+                        "issue_number": None
+                    }
 
-                time_line_array.append(entry)
+                    time_line_array.append(entry)
 
-    except Exception as e:
-        Utility.show_progress_message(do_print, 'Error on Commits Function: (' + str(e.message) + ')')
+    except Exception as er:
+        Utility.show_progress_message(do_print, 'Error on Commits Function: (' + str(er.message) + ')')
         return []
 
 
@@ -296,7 +272,6 @@ def extract_from_issue(data):
             # ensure to exclude the duplicate issues
             if issue_number not in issue_numbers_temp_array:
                 issue_numbers_temp_array.append(issue_number)
-                pprint.pprint(issueObj)
                 state = issueObj['issue']['state']
                 pr = issueObj.get('issue').get('pull_request')
 
@@ -309,7 +284,6 @@ def extract_from_issue(data):
 
                     author = issueObj['issue']['user']['login']
                     author_url = issueObj['issue']['user']['url']
-
                     author_followers_count = fetch_authors_followers_count(author, author_url)
 
                     Utility.show_progress_message(do_print, 'Issue from: ' + str(author) + '...')
@@ -317,12 +291,10 @@ def extract_from_issue(data):
                     comments_count = issueObj['issue']['comments']
                     comments_url = issueObj['issue']['comments_url']
                     comments = {}
-                    print ('here1')
+
                     seconds_to_closed = None
                     if comments_count > 0:
-                        print ('here22')
-                        print comments_url
-                        comments = extract_from_comment(comments_url, comments_count, False)
+                        comments = extract_from_comment(comments_url)
 
                     if state == 'closed':
                         repo_closed_issues_count += 1
@@ -335,7 +307,6 @@ def extract_from_issue(data):
                             close_author_followers_count = fetch_authors_followers_count(closed_by, close_author_url)
 
                         seconds_to_closed = Utility.time_diff(issueObj['issue']['closed_at'], issueObj['issue']['created_at'])
-                        print ('here2')
                         entry_closed = {
                             "issue_number": issue_number,
                             "created_at": issueObj['issue']['closed_at'],
@@ -346,9 +317,8 @@ def extract_from_issue(data):
                         }
 
                         time_line_array.append(entry_closed)
-                    print ('here3')
+
                     fetch_issue_pr_commit(issue_number, pull_request_commits, author, author_followers_count)
-                    print ('here4')
                     repo_issues_count += 1
                     entry = {
                         "issue_number": issue_number,
@@ -374,10 +344,10 @@ def extract_from_issue(data):
                         "review_comments_url": data_from_pr_url['review_comments_url']
                     }
 
-                    # time_line_array.append(entry)
+                    time_line_array.append(entry)
 
-    except Exception as e:
-        Utility.show_progress_message(do_print, 'Error on Issues Function: (' + str(e.message) + ')')
+    except Exception as er:
+        Utility.show_progress_message(do_print, 'Error on Issues Function: (' + str(er.message) + ')')
         return []
 
 
@@ -424,108 +394,51 @@ def fetch_issue_pr_commit(issue_number, url, pr_author, pr_author_followers_coun
                 "issue_number": issue_number
             }
 
-            # time_line_array.append(entry)
+            time_line_array.append(entry)
 
-    except Exception as e:
-        Utility.show_progress_message(do_print, 'Error on Pre open Issue Commits: (' + str(e.message) + ')')
+    except Exception as er:
+        Utility.show_progress_message(do_print, 'Error on Pre open Issue Commits: (' + str(er.message) + ')')
         return {}
 
 
 # extract data from comments url
-def extract_from_comment(url, comments_count, from_commit):
+def extract_from_comment(url):
 
-    global repo_commits_comments_count, repo_issues_comments_count
-    print ('here 33')
-    data_from_comments = fetch(add_url_query(url, 1), True)
-    print ('here 44')
-    entry = {}
-    if len(data_from_comments) > 0:
-        print ('here 55')
-        for comment in data_from_comments:
-            print ('here 66')
-            body = comment['body']
-            print body
-            st_prob = sentiment_prob(body, from_commit)['probability']
-            print st_prob
-            st_label = sentiment_prob(body, from_commit)['label']
-            print st_label
-            author = comment['user']['login']
-            print author
-            author_url = comment['user']['url']
-            print author_url
-            print ('here 77')
-            author_followers_count = fetch_authors_followers_count(author, author_url)
-            print ('here 88')
-            Utility.show_progress_message(do_print, 'Comment from: ' + str(author) + '...')
-            print ('here 99')
-            entry = {
-                'url': comment['url'],
-                'author': author,
-                "author_followers_count": author_followers_count,
-                'comment_created_at': comment['created_at'],
-                'body': body,
-                'positive': st_prob['pos'],
-                'neutral': st_prob['neutral'],
-                'negative': st_prob['neg'],
-                'label': st_label,
-                "type": "Comment"
-            }
+    global repo_issues_comments_count
+    comments_list = []
+    try:
 
-    if from_commit:
-        repo_commits_comments_count += comments_count
-    else:
-        repo_issues_comments_count += comments_count
+        data_from_comments = fetch(add_url_query(url, 1), True)
 
-    return entry
+        if len(data_from_comments) > 0:
+            for comment in data_from_comments:
 
+                body = comment['body']
+                sentiment = Utility.sentiment_score(body)
+                sentiment_score = sentiment['score']
+                sentiment_label = sentiment['label']
 
-# Analyse a text to find its sentiment probabilities
-def sentiment_prob(body, from_commit):
+                author = comment['user']['login']
+                author_url = comment['user']['url']
+                author_followers_count = fetch_authors_followers_count(author, author_url)
+                Utility.show_progress_message(do_print, 'Comment from: ' + str(author) + '...')
+                entry = {
+                    'url': comment['url'],
+                    'author': author,
+                    "author_followers_count": author_followers_count,
+                    'comment_created_at': comment['created_at'],
+                    'body': body,
+                    'sentiment_score': sentiment_score,
+                    'sentient_label': sentiment_label,
+                    "type": "Comment"
+                }
+                repo_issues_comments_count += 1
+                comments_list.append(entry)
 
-    global commits_positive_comments_count, commits_negative_comments_count, issues_positive_comments_count, issues_negative_comments_count
-    global commits_pos_comments_prob_sum, commits_neg_comments_prob_sum, commits_neutral_comments_prob_sum
-    global issues_pos_comments_prob_sum, issues_neg_comments_prob_sum, issues_neutral_comments_prob_sum
-    print 'hello'
-    text = urllib.urlencode({"text": body})
-    print 'hello222'
-    st = urllib.urlopen("http://text-processing.com/api/sentiment/", text)
-    print 'hello43434'
-    print st.read()
-    returned_json = json.loads(st.read())
-    print 'hello34344'
-    positive_prob = returned_json['probability']['pos']
-    print 'hello111'
-    neutral_prob = returned_json['probability']['neutral']
-    print 'hello2'
-    negative_prob = returned_json['probability']['neg']
-    print 'hello3'
-    label = returned_json['label']
-    print 'hello4'
-
-    is_positive = 0
-    is_negative = 0
-
-    if 'pos' in label:
-        is_positive += 1
-    elif 'neg' in label:
-        is_negative += 1
-
-    if from_commit:
-        commits_pos_comments_prob_sum += positive_prob
-        commits_neg_comments_prob_sum += negative_prob
-        commits_neutral_comments_prob_sum += neutral_prob
-
-        commits_positive_comments_count += is_positive
-        commits_negative_comments_count += is_negative
-    else:
-        issues_pos_comments_prob_sum += positive_prob
-        issues_neg_comments_prob_sum += negative_prob
-        issues_neutral_comments_prob_sum += neutral_prob
-
-        issues_positive_comments_count += is_positive
-        issues_negative_comments_count += is_negative
-
-    return returned_json
+        return comments_list
+    except Exception as er:
+        Utility.show_progress_message(do_print, 'Error on comments: (' + str(er.message) + ')')
+        return {}
 
 
 # a small function to output which repo index is already done, how long it takes, and how many calls are remaining
@@ -542,26 +455,12 @@ def progress(repo_num):
 
 # initialize the counters for each repo commit counts, issue counts, and sentiments analysis probabilities
 def initialize_statistics_counters():
-    global repo_commits_count, repo_issues_count, repo_closed_issues_count, repo_commits_comments_count, repo_issues_comments_count
-    global commits_positive_comments_count, commits_negative_comments_count, issues_positive_comments_count, issues_negative_comments_count
-    global commits_pos_comments_prob_sum, commits_neg_comments_prob_sum, commits_neutral_comments_prob_sum
-    global issues_pos_comments_prob_sum, issues_neg_comments_prob_sum, issues_neutral_comments_prob_sum
+    global repo_commits_count, repo_issues_count, repo_closed_issues_count, repo_issues_comments_count
 
     repo_commits_count = 0
     repo_issues_count = 0
     repo_closed_issues_count = 0
-    repo_commits_comments_count = 0
     repo_issues_comments_count = 0
-    commits_positive_comments_count = 0
-    commits_negative_comments_count = 0
-    issues_positive_comments_count = 0
-    issues_negative_comments_count = 0
-    commits_pos_comments_prob_sum = 0
-    commits_neg_comments_prob_sum = 0
-    commits_neutral_comments_prob_sum = 0
-    issues_pos_comments_prob_sum = 0
-    issues_neg_comments_prob_sum = 0
-    issues_neutral_comments_prob_sum = 0
 
 
 # The main function
@@ -570,8 +469,8 @@ if __name__ == "__main__":
     global start, author_list, do_print, starting_apicall
     do_print = True
 
-    offset = 7858
-    offset_end = 7859
+    offset = 0
+    offset_end = 400
     i = offset
     # repos.count() = 78222
 
@@ -580,12 +479,6 @@ if __name__ == "__main__":
     repo_names.close()
 
     for e in repos.find()[offset:offset_end]:
-
-        repo_commits_count = 0; repo_issues_count = 0; repo_closed_issues_count = 0; repo_commits_comments_count = 0
-        repo_issues_comments_count = 0; commits_positive_comments_count = 0; commits_negative_comments_count = 0
-        issues_positive_comments_count = 0; issues_negative_comments_count = 0; commits_pos_comments_prob_sum = 0
-        commits_neg_comments_prob_sum = 0; commits_neutral_comments_prob_sum = 0; issues_pos_comments_prob_sum = 0
-        issues_neg_comments_prob_sum = 0; issues_neutral_comments_prob_sum = 0
 
         # ensure that we are not checking duplicate repos
         if e['name']+',' not in repos_str:
@@ -606,21 +499,22 @@ if __name__ == "__main__":
                 issue_numbers_temp_array = []
 
                 initialize_statistics_counters()
-
                 create_repo_data_object(e)
                 progress(i)
+
         i += 1
 
     repo_names_write = open("reponames.txt", 'w')
     repo_names_write.write(repos_str)
     repo_names_write.close()
-    #
+
     # print time_line_db.count()
+    # k=1
     # for ii in time_line_db.find():
-    #     print ii['statistics']['total_issues']
-
-
-
+    #     if k==221:
+    #         pprint.pprint(ii)
+    #     else:
+    #         k+=1
 
 ########################################################################################################################
 # TODO Done
@@ -673,15 +567,15 @@ if __name__ == "__main__":
 # Make sure you add each entry for each repo in a MongoDB
 
 
-########################################################################################################################
+###############################################################################
 # TODO In progress:
 
 
-########################################################################################################################
+###############################################################################
 # TODO
 
 # research about ML's prediction models to find one suitable for this work (https://www.youtube.com/watch?v=Ogh_lxM58rw)
-            # important to watch: https://www.youtube.com/watch?v=JU9saQ8D8is
+    # important to watch: https://www.youtube.com/watch?v=JU9saQ8D8is
     # If you are trying to predict a continuous target, then you will need a regression model.
     # But if you are trying to predict a discrete target, then you will need a classification model.
     # https://towardsdatascience.com/the-beginners-guide-to-selecting-machine-learning-predictive-models-in-python-f2eb594e4ddc
@@ -691,14 +585,8 @@ if __name__ == "__main__":
 # How can we make the code more efficient related to its number of calls to Github API
 # setup an overleaf initial paper
 
-
-
-    # Utility.export_time_line_data([], 'pr35')
-    # print Utility.change_date_to_string('2016-04-27T18:30:27Z')
-
-#*********************************************************************
-    # Findings:
+###############################################################################
     # Issue open = Pull request
     # issue open is a commit
     # issue close is a commit that merges a pull request
-#*********************************************************************
+###############################################################################

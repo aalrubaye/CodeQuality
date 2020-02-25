@@ -4,7 +4,7 @@ from textblob import TextBlob
 import urllib
 
 
-t1 = "Very good!"
+t1 = "event if this change in the 2 files resolve the local build error it provokes a deployment error in Bluemix  undefined: shim.ChaincodeStubInterface"
 t2 = "the code looks just fine!"
 t3 = "not fine"
 
@@ -35,3 +35,6 @@ print u.read()
 
 # t = json.loads(u.read())
 # print t
+
+
+
