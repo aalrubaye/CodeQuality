@@ -3,7 +3,6 @@ import time
 from pymongo import MongoClient
 import urllib
 import Utility
-import pprint
 
 __author__ = 'Abduljaleel Al Rubaye'
 
@@ -16,7 +15,8 @@ global time_line_array, issue_numbers_temp_array, api_call, start, author_list, 
 global repo_commits_count, repo_issues_count, repo_closed_issues_count, repo_issues_comments_count
 
 privateVar = open("privateVar.txt", 'r').read()
-# privateVar = open("privateVar2.txt", 'r').read()
+
+offset = 0
 
 client_id = privateVar.split('\n', 1)[0]
 client_secret = privateVar.split('\n', 1)[1]
@@ -26,11 +26,12 @@ client_secret = privateVar.split('\n', 1)[1]
 def git_api_rate_limit():
     url = add_url_query("https://api.github.com/rate_limit", 1)
     try:
+        print url
         json_url = urllib.urlopen(url)
         data = json.loads(json_url.read())
-        #
+
         return data['rate']['remaining']
-    except urllib.URLError, er:
+    except Exception as er:
         Utility.show_progress_message(do_print, 'Error on Fetch Function: (' + str(er.message) + ')')
         return 0
 
@@ -51,12 +52,13 @@ def fetch(url, count_call):
     try:
 
         json_url = urllib.urlopen(url)
+        time.sleep(1)
         data = json.loads(json_url.read())
-
+        # time.sleep(1)
         if count_call:
             api_call -= 1
         return data
-    except urllib.URLError, er:
+    except Exception as er:
         Utility.show_progress_message(do_print, 'Error on Fetch Function: (' + str(er.message) + ')')
         return None
 
@@ -93,47 +95,51 @@ def verify_repo_still_exists(repo):
 def create_repo_data_object(repo):
     verify_repo_still_exists(repo)
 
-    if verify_repo_still_exists(repo) is False:
-        return []
-    else:
-        issue_events_url = repo['issue_events_url'][0:len(repo['issue_events_url']) - 9]
-        commits_url = repo['commits_url'][0:len(repo['commits_url']) - 6]
-        owner = repo['owner']['login']
-        owner_url = repo['owner']['url']
+    try:
+        if verify_repo_still_exists(repo) is False:
+            return []
+        else:
+            issue_events_url = repo['issue_events_url'][0:len(repo['issue_events_url']) - 9]
+            commits_url = repo['commits_url'][0:len(repo['commits_url']) - 6]
+            owner = repo['owner']['login']
+            owner_url = repo['owner']['url']
+            print repo['url']
 
-        owner_followers_count = fetch_authors_followers_count(owner, owner_url)
-        repo_contributors_url = repo['contributors_url']
-        repo_contributors_count = fetch_repo_contributors_count(repo_contributors_url)
-        time_line_entries = fetch_time_line_data(commits_url, issue_events_url)
-
-        entry = {
-            "name": repo['name'],
-            "language": repo['language'],
-            "owner": repo['owner']['login'],
-            "owner_followers_count": owner_followers_count,
-            "contributors_count": repo_contributors_count,
-            "created_at": repo['created_at'],
-            "urls": {
-                "repo_url": repo['url'],
-                "issue_events_url": issue_events_url,
-                "commits_url": commits_url
-            },
-            "popularity": {
-                "watch": repo['subscribers_count'],
-                "forks": repo['forks_count'],
-                "stars": repo['stargazers_count']
-            },
-            "time_line": time_line_entries,
-            "statistics": {
-                "total_commits": repo_commits_count+1,
-                "total_issues": repo_issues_count,
-                "total_closed_issues": repo_closed_issues_count,
-                "total_issues_comments": repo_issues_comments_count
+            owner_followers_count = fetch_authors_followers_count(owner, owner_url)
+            repo_contributors_url = repo['contributors_url']
+            repo_contributors_count = fetch_repo_contributors_count(repo_contributors_url)
+            time_line_entries = fetch_time_line_data(commits_url, issue_events_url)
+            entry = {
+                "name": repo['name'],
+                "language": repo['language'],
+                "owner": repo['owner']['login'],
+                "owner_followers_count": owner_followers_count,
+                "contributors_count": repo_contributors_count,
+                "created_at": repo['created_at'],
+                "urls": {
+                    "repo_url": repo['url'],
+                    "issue_events_url": issue_events_url,
+                    "commits_url": commits_url
+                },
+                "popularity": {
+                    "watch": repo['subscribers_count'],
+                    "forks": repo['forks_count'],
+                    "stars": repo['stargazers_count']
+                },
+                "time_line": time_line_entries,
+                "statistics": {
+                    "total_commits": repo_commits_count+1,
+                    "total_issues": repo_issues_count,
+                    "total_closed_issues": repo_closed_issues_count,
+                    "total_issues_comments": repo_issues_comments_count
+                }
             }
-        }
 
-        if len(time_line_entries) > 0:
-            time_line_db.insert(entry)
+            if len(time_line_entries) > 0:
+                time_line_db.insert(entry)
+    except Exception as er:
+        Utility.show_progress_message(do_print, 'Error on creating a repo object: (' + str(er.message) + ')')
+        return
 
 
 # return the number of repos contributors
@@ -142,8 +148,9 @@ def fetch_repo_contributors_count(url):
         count = 0
         page = 1
         data = fetch(add_url_query(url, page), True)
-        Utility.show_progress_message(do_print, 'Fetching repo contributors...')
         while len(list(data)) == 100:
+            Utility.show_progress_message(do_print, 'Fetching repo contributors...'+str(page))
+
             count += 100
             page += 1
             data = fetch(add_url_query(url, page), True)
@@ -199,7 +206,6 @@ def fetch_time_line_data(commit_url, issue_url):
         # fetching from commits url
         page = 1
         data = fetch(add_url_query(commit_url, page), True)
-
         if data is not None:
             extract_from_commit(data)
 
@@ -207,7 +213,6 @@ def fetch_time_line_data(commit_url, issue_url):
             page += 1
             data = fetch(add_url_query(commit_url, page), True)
             extract_from_commit(data)
-
         sorted_time_line = sorted(time_line_array, key=lambda l: l['created_at'])
         # Utility.export_time_line_data(sorted_time_line)
 
@@ -253,6 +258,7 @@ def extract_from_commit(data):
                     }
 
                     time_line_array.append(entry)
+                    return
 
     except Exception as er:
         Utility.show_progress_message(do_print, 'Error on Commits Function: (' + str(er.message) + ')')
@@ -291,11 +297,9 @@ def extract_from_issue(data):
                     comments_count = issueObj['issue']['comments']
                     comments_url = issueObj['issue']['comments_url']
                     comments = {}
-
                     seconds_to_closed = None
                     if comments_count > 0:
                         comments = extract_from_comment(comments_url)
-
                     if state == 'closed':
                         repo_closed_issues_count += 1
                         closed_by = issueObj['actor']['login']
@@ -305,7 +309,6 @@ def extract_from_issue(data):
                         else:
                             close_author_url = issueObj['actor']['url']
                             close_author_followers_count = fetch_authors_followers_count(closed_by, close_author_url)
-
                         seconds_to_closed = Utility.time_diff(issueObj['issue']['closed_at'], issueObj['issue']['created_at'])
                         entry_closed = {
                             "issue_number": issue_number,
@@ -315,7 +318,6 @@ def extract_from_issue(data):
                             "type": "IssueClosed",
                             "seconds_to_close": seconds_to_closed
                         }
-
                         time_line_array.append(entry_closed)
 
                     fetch_issue_pr_commit(issue_number, pull_request_commits, author, author_followers_count)
@@ -345,6 +347,7 @@ def extract_from_issue(data):
                     }
 
                     time_line_array.append(entry)
+                    return
 
     except Exception as er:
         Utility.show_progress_message(do_print, 'Error on Issues Function: (' + str(er.message) + ')')
@@ -382,7 +385,6 @@ def fetch_issue_pr_commit(issue_number, url, pr_author, pr_author_followers_coun
                 author_followers_count = fetch_authors_followers_count(author_id, author_url)
 
             Utility.show_progress_message(do_print, 'Issue Commits from: ' + str(author_id) + '...')
-
             entry = {
                 "sha": sha,
                 "url": cmt['url'],
@@ -393,9 +395,8 @@ def fetch_issue_pr_commit(issue_number, url, pr_author, pr_author_followers_coun
                 "type": "Commit",
                 "issue_number": issue_number
             }
-
             time_line_array.append(entry)
-
+            return
     except Exception as er:
         Utility.show_progress_message(do_print, 'Error on Pre open Issue Commits: (' + str(er.message) + ')')
         return {}
@@ -412,7 +413,6 @@ def extract_from_comment(url):
 
         if len(data_from_comments) > 0:
             for comment in data_from_comments:
-
                 body = comment['body']
                 sentiment = Utility.sentiment_score(body)
                 sentiment_score = sentiment['score']
@@ -469,52 +469,44 @@ if __name__ == "__main__":
     global start, author_list, do_print, starting_apicall
     do_print = True
 
-    offset = 0
-    offset_end = 400
     i = offset
-    # repos.count() = 78222
 
     repo_names = open("reponames.txt", 'r')
     repos_str = repo_names.read()
     repo_names.close()
 
-    for e in repos.find()[offset:offset_end]:
+    for e in repos.find()[offset:repos.count()].batch_size(1000000000):
 
-        # ensure that we are not checking duplicate repos
-        if e['name']+',' not in repos_str:
-            repos_str += e['name'] + ','
+        try:
+            # ensure that we are not checking duplicate repos
+            if e['name']+',' not in repos_str:
+                repos_str += e['name'] + ','
 
-            if e['open_issues_count'] > 0:
-                api_call = git_api_rate_limit()
-                starting_apicall = api_call
+                if e['open_issues_count'] > 0:
+                    api_call = git_api_rate_limit()
+                    starting_apicall = api_call
 
-                print '-' * 100
-                print 'repo number (' + str(i) + ') is in progress'
-                print '-' * 100
+                    print '-' * 100
+                    print 'repo number (' + str(i) + ') is in progress'
+                    print '-' * 100
 
-                start = time.time()
-                time_line_array = []
-                author_list = []
-                sha_list = []
-                issue_numbers_temp_array = []
+                    start = time.time()
+                    time_line_array = []
+                    author_list = []
+                    sha_list = []
+                    issue_numbers_temp_array = []
 
-                initialize_statistics_counters()
-                create_repo_data_object(e)
-                progress(i)
+                    initialize_statistics_counters()
+                    create_repo_data_object(e)
+                    progress(i)
 
-        i += 1
+            i += 1
+        except Exception as er:
+            Utility.show_progress_message(do_print, 'Error on fetching repos: (' + str(er.message) + ')')
 
     repo_names_write = open("reponames.txt", 'w')
     repo_names_write.write(repos_str)
     repo_names_write.close()
-
-    # print time_line_db.count()
-    # k=1
-    # for ii in time_line_db.find():
-    #     if k==221:
-    #         pprint.pprint(ii)
-    #     else:
-    #         k+=1
 
 ########################################################################################################################
 # TODO Done
