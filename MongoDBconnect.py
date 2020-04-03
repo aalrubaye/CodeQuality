@@ -21,6 +21,9 @@ offset = 0
 client_id = privateVar.split('\n', 1)[0]
 client_secret = privateVar.split('\n', 1)[1]
 
+final_time_line_db = MongoClient().github_data.final_time_line
+new_time_line_db4 = MongoClient().github_data4.new_time_line
+
 
 # fetch how many more calls we have for the hour
 def git_api_rate_limit():
@@ -466,47 +469,62 @@ def initialize_statistics_counters():
 # The main function
 if __name__ == "__main__":
 
-    global start, author_list, do_print, starting_apicall
-    do_print = True
+    # global start, author_list, do_print, starting_apicall
+    # do_print = True
+    #
+    # i = offset
+    #
+    # repo_names = open("reponames.txt", 'r')
+    # repos_str = repo_names.read()
+    # repo_names.close()
+    #
+    # for e in repos.find()[offset:repos.count()].batch_size(1000000000):
+    #
+    #     try:
+    #         # ensure that we are not checking duplicate repos
+    #         if e['name']+',' not in repos_str:
+    #             repos_str += e['name'] + ','
+    #
+    #             if e['open_issues_count'] > 0:
+    #                 api_call = git_api_rate_limit()
+    #                 starting_apicall = api_call
+    #
+    #                 print '-' * 100
+    #                 print 'repo number (' + str(i) + ') is in progress'
+    #                 print '-' * 100
+    #
+    #                 start = time.time()
+    #                 time_line_array = []
+    #                 author_list = []
+    #                 sha_list = []
+    #                 issue_numbers_temp_array = []
+    #
+    #                 initialize_statistics_counters()
+    #                 create_repo_data_object(e)
+    #                 progress(i)
+    #
+    #         i += 1
+    #     except Exception as er:
+    #         Utility.show_progress_message(do_print, 'Error on fetching repos: (' + str(er.message) + ')')
+    #
+    # repo_names_write = open("reponames.txt", 'w')
+    # repo_names_write.write(repos_str)
+    # repo_names_write.close()
 
-    i = offset
+    print new_time_line_db4.count()
+    print final_time_line_db.count()
+    # ur = []
+    # u=0
+    # for ee in new_time_line_db4.find():
+    #     rurl = ee['urls']['repo_url']
+    #     if rurl in ur:
+    #         u += 1
+    #     else:
+    #         final_time_line_db.insert(ee)
+    #         ur.append(rurl)
+    # print u
+#
 
-    repo_names = open("reponames.txt", 'r')
-    repos_str = repo_names.read()
-    repo_names.close()
-
-    for e in repos.find()[offset:repos.count()].batch_size(1000000000):
-
-        try:
-            # ensure that we are not checking duplicate repos
-            if e['name']+',' not in repos_str:
-                repos_str += e['name'] + ','
-
-                if e['open_issues_count'] > 0:
-                    api_call = git_api_rate_limit()
-                    starting_apicall = api_call
-
-                    print '-' * 100
-                    print 'repo number (' + str(i) + ') is in progress'
-                    print '-' * 100
-
-                    start = time.time()
-                    time_line_array = []
-                    author_list = []
-                    sha_list = []
-                    issue_numbers_temp_array = []
-
-                    initialize_statistics_counters()
-                    create_repo_data_object(e)
-                    progress(i)
-
-            i += 1
-        except Exception as er:
-            Utility.show_progress_message(do_print, 'Error on fetching repos: (' + str(er.message) + ')')
-
-    repo_names_write = open("reponames.txt", 'w')
-    repo_names_write.write(repos_str)
-    repo_names_write.close()
 
 ########################################################################################################################
 # TODO Done

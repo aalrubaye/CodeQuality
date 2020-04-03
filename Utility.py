@@ -19,6 +19,18 @@ def show_progress_message(do_print, message):
 def sentiment_score(body):
     text = TextBlob(body)
     polarity = text.sentiment.polarity
+    label = sentiment_label(polarity)
+
+    sentiment_obj = {
+        'score': polarity,
+        'label': label
+    }
+
+    return sentiment_obj
+
+
+# convert sentiment score to sentiment label
+def sentiment_label(polarity):
     if -1 <= polarity < -0.5:
         label = 'very bad'
     elif -0.5 <= polarity < -0.1:
@@ -30,12 +42,7 @@ def sentiment_score(body):
     elif 0.6 <= polarity <= 1:
         label = 'positive'
 
-    senti_obj = {
-        'score': polarity,
-        'label': label
-    }
-
-    return senti_obj
+    return label
 
 
 # convert date/time stamp to a regular string
@@ -67,11 +74,26 @@ def time_elapsed(start):
     return str(time.strftime("%H:%M:%S", time.gmtime(elapsed_time)))
 
 
-# find the time spent between open and close issues
+# find the time spent between two dates
 def time_diff(open_date_str, end_date_str):
     open_date = datetime.strptime(open_date_str, '%Y-%m-%dT%H:%M:%SZ')
     end_date = datetime.strptime(end_date_str, '%Y-%m-%dT%H:%M:%SZ')
+    return (end_date - open_date).days
+
+
+# find the seconds spent between two dates
+def time_diff_sec(open_date_str, end_date_str):
+    open_date = datetime.strptime(open_date_str, '%Y-%m-%dT%H:%M:%SZ')
+    end_date = datetime.strptime(end_date_str, '%Y-%m-%dT%H:%M:%SZ')
     return (end_date - open_date).seconds
+
+
+# return the age of a repo by 10th of March 2020
+def repos_age(created_at):
+    start_date = datetime.strptime(created_at, '%Y-%m-%dT%H:%M:%SZ')
+    today_date = datetime.strptime('2020-03-10T00:00:00Z', '%Y-%m-%dT%H:%M:%SZ')
+
+    return (today_date - start_date).days
 
 
 # to export the events sorted by date to a spread sheet
