@@ -8,10 +8,9 @@ import Utility
 __author__ = 'Abduljaleel Al Rubaye'
 
 client = MongoClient()
-database = client.github_data4
+database = client.github_data7
 repos = database.repos
 time_line_db = database.time_line
-new_time_line_db = database.new_time_line
 
 privateVar = open("privateVar.txt", 'r').read()
 client_id = privateVar.split('\n', 1)[0]
@@ -442,7 +441,7 @@ def create_repo_data_object(repo_url):
 
         if len(time_line_entries) > 0:
             print 'yesyesyes'
-            new_time_line_db.insert(entry)
+            time_line_db.insert(entry)
 
 
 # a small function to output which repo index is already done, how long it takes, and how many calls are remaining
@@ -494,13 +493,12 @@ if __name__ == "__main__":
             i += 1
     except Exception as er:
             Utility.show_progress_message(do_print, 'Error on fetching repos: (' + str(er.message) + ')')
-
+    #
     # offset = 0
     # offset_end = repos.count()
     # i = 0
-    # repo_urls = open("reposUrls.txt", 'w')
+    # repo_urls = open("reposUrls2.txt", 'w')
     #
-    # #
     # # repo_urls = open("reposUrls.txt", 'r')
     # # repo_urls_read = repo_urls.read()
     # # ru = repo_urls_read.split('\n')

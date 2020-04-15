@@ -7,10 +7,10 @@ import Utility
 __author__ = 'Abduljaleel Al Rubaye'
 
 client = MongoClient()
-database = client.github_data
+database = client.github_data7
 repos = database.repos
 time_line_db = database.time_line
-
+final_time_line_db = MongoClient().github_data.final_time_line
 global time_line_array, issue_numbers_temp_array, api_call, start, author_list, do_print, sha_list, starting_apicall, repos_str
 global repo_commits_count, repo_issues_count, repo_closed_issues_count, repo_issues_comments_count
 
@@ -21,8 +21,7 @@ offset = 0
 client_id = privateVar.split('\n', 1)[0]
 client_secret = privateVar.split('\n', 1)[1]
 
-final_time_line_db = MongoClient().github_data.final_time_line
-new_time_line_db4 = MongoClient().github_data4.new_time_line
+# final_time_line_db = MongoClient().github_data.final_time_line
 
 
 # fetch how many more calls we have for the hour
@@ -511,12 +510,14 @@ if __name__ == "__main__":
     # repo_names_write.write(repos_str)
     # repo_names_write.close()
 
-    print new_time_line_db4.count()
+    print time_line_db.count()
     print final_time_line_db.count()
+    # print final_time_line_db.count()
     # ur = []
     # u=0
-    # for ee in new_time_line_db4.find():
-    #     rurl = ee['urls']['repo_url']
+    # for ee in time_line_db.find():
+    #     final_time_line_db.insert(ee)
+    #     print ee['created_at']
     #     if rurl in ur:
     #         u += 1
     #     else:
