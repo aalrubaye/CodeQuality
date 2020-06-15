@@ -7,7 +7,7 @@ import Utility
 __author__ = 'Abduljaleel Al Rubaye'
 
 client = MongoClient()
-database = client.github_data7
+database = client.github_data
 repos = database.repos
 time_line_db = database.time_line
 final_time_line_db = MongoClient().github_data.final_time_line
@@ -511,7 +511,7 @@ if __name__ == "__main__":
     # repo_names_write.close()
 
     print time_line_db.count()
-    print final_time_line_db.count()
+
     # print final_time_line_db.count()
     # ur = []
     # u=0

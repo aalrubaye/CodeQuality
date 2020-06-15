@@ -9,10 +9,10 @@ __author__ = 'Abdul Rubaye'
 
 # show or hide print repo progress
 def show_progress_message(do_print, message):
-    # print message
-    if do_print:
-        sys.stdout.write("\r" + message)
-        sys.stdout.flush()
+    print message
+    # if do_print:
+    #     sys.stdout.write("\r" + message)
+    #     sys.stdout.flush()
 
 
 # return the sentiment score of a comment
@@ -78,7 +78,7 @@ def time_elapsed(start):
 def time_diff(open_date_str, end_date_str):
     open_date = datetime.strptime(open_date_str, '%Y-%m-%dT%H:%M:%SZ')
     end_date = datetime.strptime(end_date_str, '%Y-%m-%dT%H:%M:%SZ')
-    return (end_date - open_date).days
+    return (end_date - open_date).seconds
 
 
 # find the seconds spent between two dates
@@ -91,7 +91,7 @@ def time_diff_sec(open_date_str, end_date_str):
 # return the age of a repo by 10th of March 2020
 def repos_age(created_at):
     start_date = datetime.strptime(created_at, '%Y-%m-%dT%H:%M:%SZ')
-    today_date = datetime.strptime('2020-03-10T00:00:00Z', '%Y-%m-%dT%H:%M:%SZ')
+    today_date = datetime.strptime('2020-06-01T00:00:00Z', '%Y-%m-%dT%H:%M:%SZ')
 
     return (today_date - start_date).days
 

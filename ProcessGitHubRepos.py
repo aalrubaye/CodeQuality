@@ -8,9 +8,9 @@ import Utility
 __author__ = 'Abduljaleel Al Rubaye'
 
 client = MongoClient()
-database = client.github_data7
+database = client.github_data
 repos = database.repos
-time_line_db = database.time_line
+time_line_db = database.popular_repos
 
 privateVar = open("privateVar.txt", 'r').read()
 client_id = privateVar.split('\n', 1)[0]
@@ -458,41 +458,41 @@ def progress(repo_num):
 
 # The main function
 if __name__ == "__main__":
-
-    global start, author_list, do_print, starting_apicall
-    do_print = True
-
-    i = 0
-    repo_urls = open("reposUrls.txt", 'r')
-    repo_urls_read = repo_urls.read()
-    ru = repo_urls_read.split('\n')
-    repo_urls.close()
-
-    try:
-        for e in range(0, len(ru)-1):
-            repo_url = ru[e]
-
-            api_call = git_api_rate_limit()
-            starting_apicall = api_call
-
-            print '-' * 100
-            print 'repo number (' + str(i) + ') is in progress'
-            print repo_url
-            print '-' * 100
-
-            start = time.time()
-            time_line_array = []
-            author_list = []
-            sha_list = []
-            issue_numbers_temp_array = []
-
-            initialize_statistics_counters()
-            create_repo_data_object(repo_url)
-            progress(i)
-
-            i += 1
-    except Exception as er:
-            Utility.show_progress_message(do_print, 'Error on fetching repos: (' + str(er.message) + ')')
+    print time_line_db.count()
+    # global start, author_list, do_print, starting_apicall
+    # do_print = True
+    #
+    # i = 0
+    # repo_urls = open("reposUrls.txt", 'r')
+    # repo_urls_read = repo_urls.read()
+    # ru = repo_urls_read.split('\n')
+    # repo_urls.close()
+    #
+    # try:
+    #     for e in range(0, len(ru)-1):
+    #         repo_url = ru[e]
+    #
+    #         api_call = git_api_rate_limit()
+    #         starting_apicall = api_call
+    #
+    #         print '-' * 100
+    #         print 'repo number (' + str(i) + ') is in progress'
+    #         print repo_url
+    #         print '-' * 100
+    #
+    #         start = time.time()
+    #         time_line_array = []
+    #         author_list = []
+    #         sha_list = []
+    #         issue_numbers_temp_array = []
+    #
+    #         initialize_statistics_counters()
+    #         create_repo_data_object(repo_url)
+    #         progress(i)
+    #
+    #         i += 1
+    # except Exception as er:
+    #         Utility.show_progress_message(do_print, 'Error on fetching repos: (' + str(er.message) + ')')
     #
     # offset = 0
     # offset_end = repos.count()

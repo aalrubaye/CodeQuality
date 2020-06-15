@@ -44,6 +44,7 @@ repo_info_array = [
     'days_before_initial_issue',
     'avg_days_between_issues',
     'avg_commits_between_issues',
+    'sec_to_close',
     'avg_secs_before_issue_closes',
     'avg_sec_before_issue_with_comments_closes',
     'avg_sec_before_issue_without_comments_closes',
@@ -95,7 +96,7 @@ def export_time_line_data():
         if total_issues_comments_count > 0:
             avg_repo_sentiment_score = sum(from_time_line['repo_sentiment_score_array']) / float(total_issues_comments_count)
             avg_repo_sentiment_label = Utility.sentiment_label(avg_repo_sentiment_score)
-            avg_issue_sentiment_score = sum(from_time_line['issue_sentiment_score_array']) / float(issues_count)
+            avg_issue_sentiment_score = sum(from_time_line['issue_sentiment_score_array']) / float(issues_reviewed)
             avg_issue_sentiment_label = Utility.sentiment_label(avg_issue_sentiment_score)
         else:
             avg_repo_sentiment_score = 0
@@ -160,6 +161,7 @@ def export_time_line_data():
             'avg_days_between_issues': 0 if (issues_count-1) == 0 else sum(days_between_issues)/float(issues_count-1),
             'commits_between_issues': commits_between_issues[1:],
             'avg_commits_between_issues': 0 if (issues_count-1) ==0 else sum(commits_between_issues[1:]) / float(issues_count-1),
+            'sec_to_close': from_time_line['secs_before_issue_closes'],
             'avg_secs_before_issue_closes': avg_secs_before_issue_closes,
             'avg_sec_before_issue_with_comments_closes': avg_secs_before_issue_with_comments_closes,
             'avg_sec_before_issue_without_comments_closes': avg_secs_before_issue_without_comments_closes,
