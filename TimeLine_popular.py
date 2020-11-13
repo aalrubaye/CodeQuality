@@ -7,24 +7,12 @@ import json
 import time
 from pymongo import MongoClient
 import Utility
+import datetime
 
 __author__ = 'Abduljaleel Al Rubaye'
 
-final_time_line_db = MongoClient().github_data.final_time_line
-time_line_popular_db = MongoClient().github_data.popular_repo_110
-
 db_list = [
-    MongoClient().github_data.popular_repo_9,
-    MongoClient().github_data.popular_repo_90,
-    MongoClient().github_data.popular_repo_91,
-    MongoClient().github_data.popular_repo_92,
-    MongoClient().github_data.popular_repo_93,
-    MongoClient().github_data.popular_repo_94,
-    MongoClient().github_data.popular_repo_95,
-    MongoClient().github_data.popular_repo_96,
-    MongoClient().github_data.popular_repo_97,
-    MongoClient().github_data.popular_repo_98,
-    MongoClient().github_data.popular_repo_99
+MongoClient().github_data.popular_repo_18
 ]
 
 repo_info_array = [
@@ -101,10 +89,15 @@ def export_time_line_data(entry, sheet1, row):
     issues_closed = entry['statistics']['total_closed_issues']
     commits_count = entry['statistics']['total_commits']
     total_issues_comments_count = entry['statistics']['total_issues_comments']
-    avg_issues_comments_count = total_issues_comments_count / float(issues_count)
-    from_time_line = process_time_line(entry['time_line'])
+    avg_issues_comments_count = 0 if issues_count == 0 else total_issues_comments_count / float(issues_count)
+
+    time_line_array = entry['time_line']
+    sorted_time_line = sorted(time_line_array, key=lambda l: l['created_at'])
+
+    from_time_line = process_time_line(created_at, sorted_time_line)
+
     issues_reviewed = from_time_line['issues_reviewed']
-    avg_commits_per_pr = float(from_time_line['total_commits_per_pr']) / float(issues_count)
+    avg_commits_per_pr = 0 if issues_count == 0 else float(from_time_line['total_commits_per_pr']) / float(issues_count)
     repo_sentiment_score_array = from_time_line['repo_sentiment_score_array']
     issue_sentiment_score_array = from_time_line['issue_sentiment_score_array']
 
@@ -140,6 +133,7 @@ def export_time_line_data(entry, sheet1, row):
     reviewers_count = from_time_line['reviewers_count']
     min_to_commit = from_time_line['min_to_commit']
 
+
     e = {
         'name': name,
         'age': age,
@@ -170,10 +164,10 @@ def export_time_line_data(entry, sheet1, row):
         'avg_line_deletion_issues_with_comments': avg_line_deletion_issues_with_comments,
         'avg_line_addition_issues_without_comments': avg_line_addition_issues_without_comments,
         'avg_line_deletion_issues_without_comments': avg_line_deletion_issues_without_comments,
-        'commits_before_initial_issue': commits_between_issues[0],
+        'commits_before_initial_issue': 0 if len(commits_between_issues) == 0 else commits_between_issues[0],
         'days_before_initial_issue': days_before_initial_issue,
         'days_between_issues': days_between_issues,
-        'avg_days_between_issues': 0 if (issues_count-1) == 0 else sum(days_between_issues)/float(issues_count-1),
+        'avg_days_between_issues': 0 if (issues_count-1) == 0 else (sum(days_between_issues)/float(issues_count-1))/86400,
         'commits_between_issues': commits_between_issues[1:],
         'avg_commits_between_issues': 0 if (issues_count-1) ==0 else sum(commits_between_issues[1:]) / float(issues_count-1),
         'sec_to_close': [],
@@ -183,27 +177,24 @@ def export_time_line_data(entry, sheet1, row):
         'avg_issue_openers_followers_count': avg_issue_opener_fc,
         'avg_issue_closers_followers_count': avg_issue_closer_fc,
         'reviewers_count_per_issue': reviewers_count,
-        'avg_reviewers_count_per_issue': sum(reviewers_count) / float(issues_count),
+        'avg_reviewers_count_per_issue': 0 if issues_count == 0 else sum(reviewers_count) / float(issues_count),
         'avg_reviewers_count_per_reviewed_issue': 0 if issues_reviewed == 0 else sum(reviewers_count) / float(issues_reviewed),
         'minutes_to_commit': min_to_commit,
         'avg_minutes_to_commit': sum(min_to_commit) / float(commits_count),
         'total_addition': from_time_line['addition'],
         'total_deletion': from_time_line['deletion']
     }
-
-    # pprint.pprint(e)
+    print 'here'
+    print days_between_issues
+    print len(days_between_issues)
+    print sum(days_between_issues)
+    print issues_count
+    print (sum(days_between_issues)/float(issues_count-1))
 
     export_to_sheet(e, sheet1, row)
-    # row += 1
-
-    # # break
-    # if ii > 5:
-    #     break
-    #
-    # ii += 1
 
 
-def process_time_line(repo_time_line):
+def process_time_line(repo_created_at, repo_time_line):
 
     issues_reviewed = 0
     total_commits_per_pr = 0
@@ -303,11 +294,28 @@ def process_time_line(repo_time_line):
         else:
             issue_closers_fc.append(entry['author_followers_count'])
 
-    days_before_initial_issue = Utility.time_diff(first_commit_date, issue_opened_date[0])
+    dates = [datetime.datetime.strptime(ts, '%Y-%m-%dT%H:%M:%SZ') for ts in issue_opened_date]
+    dates.sort()
 
+    sorteddates = [datetime.datetime.strftime(ts, '%Y-%m-%dT%H:%M:%SZ') for ts in dates]
+    print '*'*100
+    print sorteddates
+    print '*'*100
     days_between_issues = []
-    for dt in range(0, len(issue_opened_date)-1):
-        days_between_issues.append(Utility.time_diff(issue_opened_date[dt], issue_opened_date[dt+1]))
+    for dt in range(0, len(sorteddates)-1):
+        days_between_issues.append(Utility.time_diff(sorteddates[dt], sorteddates[dt+1]))
+
+    days_before_initial_issue = 0 if len(sorteddates) == 0 else Utility.time_diff_day(repo_created_at, sorteddates[0])
+
+    print days_between_issues
+
+    print sorteddates
+    print len(sorteddates)
+
+    print '-'*100
+    print repo_created_at
+    print sorteddates[0]
+    print days_before_initial_issue
 
     returned = {
         'issues_reviewed': issues_reviewed,
@@ -359,40 +367,43 @@ if __name__ == "__main__":
 
     row = 1
     for k in range(0, len(db_list)):
-        time_line_popular_db = db_list[k]
-        count = time_line_popular_db.count()
-        main_entry = time_line_popular_db.find()[count -1]
-        if main_entry.get('contributors_count'):
+        try:
+            count = db_list[k].count()
+            if count > 0:
+                main_entry = db_list[k].find()[count - 1]
+                if main_entry.get('contributors_count'):
 
-            new_entry = []
-            comm_array = []
+                    new_entry = []
+                    comm_array = []
 
-            for com in time_line_popular_db.find():
-                if com.get('type') == 'Comment':
-                    comm_array.append(com)
+                    for com in db_list[k].find():
+                        if com.get('type') == 'Comment':
+                            comm_array.append(com)
 
-            j = 0
-            for e in time_line_popular_db.find():
-                j+=1
-                if not e.get('contributors_count') and e.get('type') != 'Comment':
-                    if e.get('type') == 'IssueOpened':
-                        issue_comments = []
-                        e['comments'] = {}
-                        issue_num = e['issue_number']
-                        for i in range(0,len(comm_array)):
-                            comm_issue_num = comm_array[i].get('issue_number')
-                            if issue_num == comm_issue_num:
-                                issue_comments.append(comm_array[i])
-                        if len(issue_comments) != 0:
-                            e['comments'] = issue_comments
-                    new_entry.append(e)
-                print str(k)+ ' - '+str(j)+'/'+str(count)
+                    j = 0
+                    for e in db_list[k].find():
+                        j+=1
+                        if not e.get('contributors_count') and e.get('type') != 'Comment':
+                            if e.get('type') == 'IssueOpened':
+                                issue_comments = []
+                                e['comments'] = {}
+                                issue_num = e['issue_number']
+                                for i in range(0,len(comm_array)):
+                                    comm_issue_num = comm_array[i].get('issue_number')
+                                    if issue_num == comm_issue_num:
+                                        issue_comments.append(comm_array[i])
+                                if len(issue_comments) != 0:
+                                    e['comments'] = issue_comments
+                            new_entry.append(e)
+                        print str(k)+ ' - '+str(j)+'/'+str(count)
 
-            main_entry['time_line'] = new_entry
-            # pprint.pprint(main_entry)
-            export_time_line_data(main_entry, sheet1, row)
-            row+=1
-            print str(k) + ' is done'
-            results.save("popular_pr_time_line_results00.xls")
-        else:
-            print str(k) + ' is not a complete processed repository'
+                    main_entry['time_line'] = new_entry
+                    # pprint.pprint(main_entry)
+                    export_time_line_data(main_entry, sheet1, row)
+                    row+=1
+                    print str(k) + ' is done'
+                    results.save("popular_new4.xls")
+                else:
+                    print str(k) + ' is not a complete processed repository'
+        except Exception as er:
+            print er.message

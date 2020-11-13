@@ -81,6 +81,13 @@ def time_diff(open_date_str, end_date_str):
     return (end_date - open_date).seconds
 
 
+# find the time spent between two dates
+def time_diff_day(open_date_str, end_date_str):
+    open_date = datetime.strptime(open_date_str, '%Y-%m-%dT%H:%M:%SZ')
+    end_date = datetime.strptime(end_date_str, '%Y-%m-%dT%H:%M:%SZ')
+    return (end_date - open_date).days
+
+
 # find the seconds spent between two dates
 def time_diff_sec(open_date_str, end_date_str):
     open_date = datetime.strptime(open_date_str, '%Y-%m-%dT%H:%M:%SZ')

@@ -11,7 +11,6 @@ client = MongoClient()
 database = client.github_data
 repos = database.repos
 time_line_db = database.popular_repo_110
-uurl = "https://api.github.com/repos/freeCodeCamp/freeCodeCamp"
 
 privateVar = open("privateVar.txt", 'r').read()
 client_id = privateVar.split('\n', 1)[0]
