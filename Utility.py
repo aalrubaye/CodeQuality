@@ -107,7 +107,6 @@ def repos_age(created_at):
 def export_time_line_data(time_line, sheet_name):
     results = xlwt.Workbook(encoding="utf-8")
 
-
     time_line = [{'author': 'dshuffma-ibm',
                 'author_followers_count': 44,
                 'created_at': '2016-04-27T18:08:41Z',

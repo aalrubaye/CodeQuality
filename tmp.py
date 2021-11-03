@@ -6,8 +6,8 @@ __author__ = 'Abduljaleel Al Rubaye'
 
 # The main function
 if __name__ == "__main__":
-    x = 4001
-    y = 4501
+    x = 2250
+    y = 2500
     print 'db_list = ['
     for iii in range (x, y):
             if iii == y-1:

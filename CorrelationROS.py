@@ -36,7 +36,8 @@ def coeff(a,b):
 
 if __name__ == "__main__":
 
-
+    print len(Issues)
+    print len(Contributors)
 
     # print r
     # print "slope => "+ str(r[0])
@@ -71,16 +72,16 @@ if __name__ == "__main__":
     # coeff(Issues_Reviewed, Stars)
     # coeff(Issues_Reviewed, Watch)
 
-    coeff(Reviewers, Commits)
-    coeff(Reviewers, Comments)
-    coeff(Reviewers, Contributors)
-    coeff(Reviewers, Sentiment_Score)
-    coeff(Reviewers, Lines_Added)
-    coeff(Reviewers, Lines_Removed)
-    coeff(Reviewers, Forks)
-    coeff(Reviewers, Stars)
-    coeff(Reviewers, Watch)
-    coeff(Reviewers, Commits_Between_Issues)
-    coeff(Reviewers, Seconds_to_Close_Issues)
+    # coeff(Reviewers, Commits)
+    # coeff(Reviewers, Comments)
+    # coeff(Reviewers, Contributors)
+    # coeff(Reviewers, Sentiment_Score)
+    # coeff(Reviewers, Lines_Added)
+    # coeff(Reviewers, Lines_Removed)
+    # coeff(Reviewers, Forks)
+    # coeff(Reviewers, Stars)
+    # coeff(Reviewers, Watch)
+    # coeff(Reviewers, Commits_Between_Issues)
+    # coeff(Reviewers, Seconds_to_Close_Issues)
 
 

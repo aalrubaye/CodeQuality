@@ -4,10 +4,6 @@ import time
 import urllib
 import urllib2
 
-import simplejson
-
-import Utility
-
 __author__ = 'Abduljaleel Al Rubaye'
 
 global api_call
@@ -65,7 +61,7 @@ def fetch(url):
     try:
         # print url
         req = urllib2.Request(url)
-        req.add_header("Accept","application/vnd.github.mercy-preview+json")
+        req.add_header("Accept","application/vnd.github.v3+json")
         resp = urllib2.urlopen(req)
         # data = json.loads(json_url.read())
         data = json.loads(resp.read())
@@ -86,34 +82,49 @@ def fetch(url):
 # content = resp.read()
 
 
+
 def convert_data_to_list(itm):
+    listt = ""
     for d in range(0, len(itm)):
-        print itm[d]['url']
+        x = str(itm[d]['url'])
+        print x
+        listt += x+"\n"
+
+    return listt
+
 
 def fetch_topics(topic):
     global api_call
     api_call = git_api_rate_limit()
     url = 'https://api.github.com/search/repositories?q=topic:'+topic
 
+    file = open("robotics-programming.txt","w")
+
+    list_url = ""
+
     count = 0
     try:
         page = 1
         data = fetch(add_url_query(url, page, False))
         items = data['items']
-        convert_data_to_list(items)
+        list_url += str(convert_data_to_list(items))+"\n"
         count += 1
         while len(items) == 100:
             page += 1
             data = fetch(add_url_query(url, page, False))
             items = data['items']
-            convert_data_to_list(items)
+            list_url += str(convert_data_to_list(items))+"\n"
             count += 1
             if count == 10:
                 break
         print 'done'
 
     except Exception as er:
+        file.write(list_url)
         print er.message
+
+    file.write(list_url)
+    file.close()
 
 
 def fetch_repo_topic_list(repo_url):
@@ -127,7 +138,20 @@ def fetch_repo_topic_list(repo_url):
 
 # The main function
 if __name__ == "__main__":
-    # fetch_topics('ros')
-    api_call = git_api_rate_limit()
-    fetch_repo_topic_list('https://api.github.com/repos/akhilthomas17/reinforced_visual_slam')
+    fetch_topics('computer-vision')
+    # api_call = git_api_rate_limit()
+    # print api_call
+    # fetch_repo_topic_list('https://api.github.com/repos/akhilthomas17/reinforced_visual_slam')
 
+# ros
+# ros2
+# robotics
+# robotic
+# robot
+# deeplearning
+# reinforcementlearning
+# artificial
+# machine-learning
+# robotics-programming
+# astar
+# computer-vision
